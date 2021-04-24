@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 using MultiShop.ShopFramework;
 
-namespace MultiShop.Shops
+namespace MultiShop.Load
 {
     public class ShopLoader
     {

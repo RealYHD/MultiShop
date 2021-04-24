@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 
 // from https://docs.microsoft.com/en-us/dotnet/core/tutorials/creating-app-with-plugin-support#load-plugins
-namespace MultiShop.Shops
+namespace MultiShop.Load
 {
     public class LoaderContext : AssemblyLoadContext
     {
