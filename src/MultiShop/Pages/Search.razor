@@ -1,0 +1,397 @@
+@page "/search/{Query?}"
+@using Microsoft.Extensions.Configuration
+@using ShopFramework
+@using SimpleLogger
+@using SearchStructures
+@inject HttpClient Http
+@inject IConfiguration Configuration
+@inject IJSRuntime js
+
+@* TODO: Finish sorting, move things to individual components where possible, key search results. *@
+
+<div class="my-2">
+    <div class="input-group my-2">
+        <input type="text" class="form-control" placeholder="What are you looking for?" aria-label="What are you looking for?" id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await PerformSearch(Query);})" disabled="@searching">
+        <div class="input-group-append">
+            <button class=@ToggleSearchConfigButtonCss type="button" @onclick="@(() => showSearchConfiguration = !showSearchConfiguration)" title="Configure"><span class="oi oi-cog align-text-top"></span></button>
+            <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await PerformSearch(Query))" disabled="@searching">Search</button>
+        </div>
+    </div>
+    @if (showSearchConfiguration)
+    {
+        <div class="mb-2 mt-4 py-2">
+            <h4>Configuration</h4>
+            <div class="d-flex flex-wrap justify-content-start">
+                <div class="card m-2" style="width: 24em;">
+                    <div class="card-body">
+                        <h5>Shop Quantity</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">How many results from each store?</h6>
+                        <p class="card-text">This is the maximum number of results we gather for each store we have access to. The larger the result, the longer it takes to load search queries.</p>
+                        <div class="form-group">
+                            <label for="quantitySlider">Quantity: @activeProfile.maxResults</label>
+                            <input class="form-control-range" type="range" id="quantitySlider" min="1" max="200" step="1" @bind="activeProfile.maxResults" @bind:event="oninput">
+                        </div>
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 18em;">
+                    <div class="card-body">
+                        <h5 class="card-title">Currency</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">What currency would you like results in?</h6>
+                        <p class="card-text">The currency displayed may either be from the online store directly, or through currency conversion (we'll put a little tag beside the coonverted ones).</p>
+                        <div class="input-group my-3">
+                            <div class="input-group-prepend">
+                                <label class="input-group-text" for="currency-select">Currency</label>
+                            </div>
+                            <select class="form-control custom-select" id="currency-select" @bind="activeProfile.currency">
+                                @foreach (Currency currency in Enum.GetValues<Currency>())
+                                {
+                                    @if (currency == activeProfile.currency)
+                                    {
+                                        <option selected>@currency</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@currency">@currency</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 23em;">
+                    <div class="card-body">
+                        <h5>Minimum Rating</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">We'll crop out the lower rated stuff.</h6>
+                        <p class="card-text">We'll only show products that have a rating greater than or equal to the set minimum rating. Optionally, we can also show those that don't have rating.</p>
+                        <div class="form-group">
+                            <label for="ratingSlider">Minimum rating: @(string.Format("{0:P0}", activeProfile.minRating))</label>
+                            <input class="form-control-range" type="range" id="ratingSlider" min="0" max="1" step="0.01" @bind="activeProfile.minRating" @bind:event="oninput">
+                        </div>
+                        <div class="form-group form-check">
+                            <input class="form-check-input" type="checkbox" id="keepUnratedCheckbox" @bind="activeProfile.keepUnrated">
+                            <label class="form-check-label" for="keepUnratedCheckbox">Keep unrated results</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 25em;">
+                    <div class="card-body">
+                        <h5>Price Range</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Whats your budget?</h6>
+                        <p class="card-text">Results will be pruned of budgets that fall outside of the designated range. The checkbox can enable or disable the upper bound. These bounds do include the shipping price if it's known.</p>
+                        <div class="input-group my-2">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">
+                                    <input type="checkbox" @bind="activeProfile.enableUpperPrice">
+                                </div>
+                                <span class="input-group-text">Upper limit</span>
+                            </div>
+                            <input type="number" class="form-control" @bind="activeProfile.UpperPrice" disabled="@(!activeProfile.enableUpperPrice)">
+                            <div class="input-group-append">
+                                <span class="input-group-text">.00</span>
+                            </div>
+                        </div>
+                        <div class="input-group my-2">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Lower limit</span>
+                            </div>
+                            <input type="number" class="form-control" @bind="activeProfile.lowerPrice">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 22em;">
+                    <div class="card-body">
+                        <h5>Shops Searched</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">What's your preference?</h6>
+                        <p class="card-text">We'll only look through shops that are enabled in this list. Of course, at least one shop has to be enabled.</p>
+                        @foreach (string shop in Shops.Keys)
+                        {
+                            <div class="form-group form-check my-2">
+                                <input class="form-check-input" type="checkbox" id=@(shop + "Checkbox") @bind="activeProfile.shopStates[shop]" disabled="@(!activeProfile.shopStates.CanDisableShop())">
+                                <label class="form-check-label" for=@(shop + "Checkbox")>@shop enabled</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 20em;">
+                    <div class="card-body">
+                        <h5>Minimum Purchases</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">If they're purchasing, I am too!</h6>
+                        <p class="card-text">Only products that have enough purchases are shown. Optionally, we can also show results that don't have a purchase tally.</p>
+                        <div class="input-group my-2">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Minimum purchases</span>
+                            </div>
+                            <input type="number" class="form-control" min="0" step="1" @bind="activeProfile.minPurchases">
+                        </div>
+                        <div class="form-group form-check my-2">
+                            <input class="form-check-input" type="checkbox" id="keepNullPurchasesCheckbox" @bind="activeProfile.keepUnknownPurchaseCount">
+                            <label class="form-check-label" for="keepNullPurchasesCheckbox">Keep unknown listings</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 20em;">
+                    <div class="card-body">
+                        <h5>Minimum Reviews</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Well if this many people say it's good...</h6>
+                        <p class="card-text">Only products with enough reviews/ratings are shown. Optionally, we can also show the results that don't have this information.</p>
+                        <div class="input-group my-2">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Minimum reviews</span>
+                            </div>
+                            <input type="number" class="form-control" min="0" step="1" @bind="activeProfile.minReviews">
+                        </div>
+                        <div class="form-group form-check my-2">
+                            <input class="form-check-input" type="checkbox" id="keepNullRatingsCheckbox" @bind="activeProfile.keepUnknownRatingCount">
+                            <label class="form-check-label" for="keepNullRatingsCheckbox">Keep unknown listings</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card m-2" style="width: 22rem;">
+                    <div class="card-body">
+                        <h5>Shipping</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Free shipping?</h6>
+                        <p class="card-text">Show results with shipping rates less than a certain value, and choose whether or not to display listings without shipping information.</p>
+                        <div class="input-group my-2">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <input type="checkbox" @bind="activeProfile.enableMaxShippingFee">
+                                </span>
+                                <span class="input-group-text">Max shipping</span>
+                            </div>
+                            <input type="number" class="form-control" min="0" step="1" @bind="activeProfile.MaxShippingFee" disabled="@(!activeProfile.enableMaxShippingFee)">
+                            <div class="input-group-append">
+                                <span class="input-group-text">.00</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-check my-2">
+                            <input class="form-check-input" type="checkbox" id="keepNullShipping" @bind="activeProfile.keepUnknownShipping">
+                            <label class="form-check-label" for="keepNullShipping">Keep unknown listings</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="my-3 py-2">
+    <div class="d-flex flex-wrap justify-content-between" style="width: 100%; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: lightgray;">
+        <div class="align-self-end">
+            @if (searching)
+            {
+                @if (listings.Count != 0)
+                {
+                    <div class="spinner-border spinner-border-sm text-secondary my-auto mr-1" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <span class="text-muted mx-1">Looked through @resultsChecked listings and found @listings.Count viable results. We're still looking!</span>
+                }
+                else
+                {
+                    <div class="spinner-border spinner-border-sm text-primary my-auto mr-1" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <span class="text-muted">Hold tight! We're looking through the stores for viable results...</span>
+                }
+            }
+            else if (listings.Count != 0)
+            {
+                @if (organizing)
+                {
+                    <div class="spinner-border spinner-border-sm text-success my-auto mr-1" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <span class="text-muted">Organizing the data to your spec...</span>
+                }
+                else
+                {
+                    <span class="text-muted">Looked through @resultsChecked listings and found @listings.Count viable results.</span>
+                }
+            }
+            else if (searched)
+            {
+                <span class="text-muted">We've found @resultsChecked listings and unfortunately none matched your search.</span>
+            }
+            else
+            {
+                <span class="text-muted">Search for something to see the results!</span>
+            }
+        </div>
+        <CustomDropdown AdditionalButtonClasses="btn-outline-secondary btn-tab" Justify="right">
+            <ButtonContent>
+                <span class="oi oi-sort-descending"></span>
+            </ButtonContent>
+            <DropdownContent>
+                <DragAndDropList Items="@(activeResultsProfile.Order)" Context="item" AdditionalListClasses="list-group-empty-top-left" OnOrderChange="@(async () => await Organize(activeResultsProfile.Order))">
+                    <DraggableItem>
+                        @(item.FriendlyName())
+                    </DraggableItem>
+                </DragAndDropList>
+            </DropdownContent>
+        </CustomDropdown>
+
+    </div>
+    <div>
+        <ListingTableView Products="@listings" />
+    </div>
+</div>
+
+
+@code {
+    [CascadingParameter(Name = "Shops")]
+    public Dictionary<string, IShop> Shops { get; set; }
+
+    [Parameter]
+    public string Query { get; set; }
+
+    private SearchProfile activeProfile = new SearchProfile();
+    private ResultsProfile activeResultsProfile = new ResultsProfile();
+
+    private bool showSearchConfiguration = false;
+    private string ToggleSearchConfigButtonCss
+    {
+        get => "btn btn-outline-secondary" + (showSearchConfiguration ? " active" : "");
+    }
+
+    private bool searched = false;
+    private bool searching = false;
+    private bool organizing = false;
+
+    private int resultsChecked = 0;
+    private List<ProductListingInfo> listings = new List<ProductListingInfo>();
+
+    protected override void OnInitialized()
+    {
+        foreach (string shop in Shops.Keys)
+        {
+            activeProfile.shopStates[shop] = true;
+        }
+        base.OnInitialized();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(Query))
+        {
+            await PerformSearch(Query);
+        }
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task PerformSearch(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return;
+        if (searching) return;
+        searching = true;
+        Logger.Log($"Received search request for \"{query}\".", LogLevel.Debug);
+        resultsChecked = 0;
+        listings.Clear();
+        Dictionary<ResultsProfile.Category, List<ProductListingInfo>> greatest = new Dictionary<ResultsProfile.Category,
+        List<ProductListingInfo>>();
+        foreach (string shopName in Shops.Keys)
+        {
+            if (activeProfile.shopStates[shopName])
+            {
+                Logger.Log($"Querying \"{shopName}\" for products.");
+                Shops[shopName].SetupSession(query, activeProfile.currency);
+                int shopViableResults = 0;
+                await foreach (ProductListing listing in Shops[shopName])
+                {
+                    resultsChecked += 1;
+                    if (resultsChecked % 50 == 0) {
+                        StateHasChanged();
+                        await Task.Yield();
+                    }
+
+
+                    if (listing.Shipping == null && !activeProfile.keepUnknownShipping || (activeProfile.enableMaxShippingFee && listing.Shipping > activeProfile.MaxShippingFee)) continue;
+                    float shippingDifference = listing.Shipping != null ? listing.Shipping.Value : 0;
+                    if (!(listing.LowerPrice + shippingDifference >= activeProfile.lowerPrice && (!activeProfile.enableUpperPrice || listing.UpperPrice + shippingDifference <= activeProfile.UpperPrice))) continue;
+                    if ((listing.Rating == null && !activeProfile.keepUnrated) || activeProfile.minRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
+                    if ((listing.PurchaseCount == null && !activeProfile.keepUnknownPurchaseCount) || activeProfile.minPurchases > (listing.PurchaseCount == null ? 0 : listing.PurchaseCount)) continue;
+                    if ((listing.ReviewCount == null && !activeProfile.keepUnknownRatingCount) || activeProfile.minReviews > (listing.ReviewCount == null ? 0 : listing.ReviewCount)) continue;
+
+                    ProductListingInfo info = new ProductListingInfo(listing, shopName);
+                    listings.Add(info);
+                    await Task.Yield();
+                    foreach (ResultsProfile.Category c in Enum.GetValues<ResultsProfile.Category>())
+                    {
+                        if (!greatest.ContainsKey(c)) greatest[c] = new List<ProductListingInfo>();
+                        if (greatest[c].Count > 0)
+                        {
+                            int? compResult = c.CompareListings(info, greatest[c][0]);
+                            if (compResult.HasValue)
+                            {
+                                if (compResult > 0) greatest[c].Clear();
+                                if (compResult >= 0) greatest[c].Add(info);
+                            }
+                        }
+                        else
+                        {
+                            if (c.CompareListings(info, info).HasValue)
+                            {
+                                greatest[c].Add(info);
+                            }
+                        }
+                    }
+
+                    shopViableResults += 1;
+                    if (shopViableResults >= activeProfile.maxResults) break;
+                }
+                Logger.Log($"\"{shopName}\" has completed. There are {listings.Count} results in total.", LogLevel.Debug);
+            }
+            else
+            {
+                Logger.Log($"Skipping {shopName} since it's disabled.");
+            }
+        }
+        searching = false;
+        searched = true;
+        
+        foreach (ResultsProfile.Category c in greatest.Keys)
+        {
+            foreach (ProductListingInfo info in greatest[c])
+            {
+                info.Tops.Add(c);
+            }
+        }
+
+        await Organize(activeResultsProfile.Order);
+    }
+
+    private async Task Organize(List<ResultsProfile.Category> order)
+    {
+        if (searching) return;
+        organizing = true;
+        StateHasChanged();
+
+        List<ProductListingInfo> sortedResults = await Task.Run<List<ProductListingInfo>>(() => {
+            List<ProductListingInfo> sorted = new List<ProductListingInfo>(listings);
+            sorted.Sort((a, b) =>
+            {
+                foreach (ResultsProfile.Category category in activeResultsProfile.Order)
+                {
+                    int? compareResult = category.CompareListings(a, b);
+                    if (compareResult.HasValue && compareResult.Value != 0)
+                    {
+                        return -compareResult.Value;
+                    }
+                }
+                return 0;
+            });
+            return sorted;
+        });
+        listings.Clear();
+        listings.AddRange(sortedResults);
+        organizing = false;
+        StateHasChanged();
+    }
+}

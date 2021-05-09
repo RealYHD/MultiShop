@@ -1,0 +1,11 @@
+@page "/info"
+@using ShopFramework
+
+<div>
+    
+</div>
+
+@code {
+    [CascadingParameter(Name = "Shops")]
+    public Dictionary<string, IShop> Shops { get; set; }
+}

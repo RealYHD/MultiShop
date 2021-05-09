@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using GameServiceWarden.Core.Tests;
 using MultiShop.ShopFramework;
@@ -16,57 +17,45 @@ namespace AliExpressShop.Tests
         }
 
         [Fact]
-        public void Search_SearchForItem_ImportantInfoFound()
+        public async void Search_SearchForItem_MultiplePages()
         {
             //Given
+            const int MAX_RESULTS = 120;
             Shop shop = new Shop();
-            shop.Initiate(Currency.CAD);
+            shop.UseProxy = false;
+            shop.Initialize();
             //When
-            Task<IEnumerable<ProductListing>> listingsTask = shop.Search("mpu6050", 1);
-            listingsTask.Wait();
-            IEnumerable<ProductListing> listings = listingsTask.Result;
-            Assert.NotEmpty(listings);
-            foreach (ProductListing listing in listings)
+            shop.SetupSession("mpu6050", Currency.CAD);
+            //Then
+            int count = 0;
+            await foreach (ProductListing listing in shop)
             {
                 Assert.False(string.IsNullOrWhiteSpace(listing.Name));
-                Assert.True(listing.LowerPrice != 0);
+                count += 1;
+                if (count > MAX_RESULTS) return;
             }
         }
 
         [Fact]
-        public void Search_SearchForItem_MultiplePages()
-        {
-            //Given
-            Shop shop = new Shop();
-            shop.Initiate(Currency.CAD);
-            //When
-            Task<IEnumerable<ProductListing>> listingsTask = shop.Search("mpu6050", 2);
-            listingsTask.Wait();
-            IEnumerable<ProductListing> listings = listingsTask.Result;
-            //Then
-            Assert.NotEmpty(listings);
-            foreach (ProductListing listing in listings)
-            {
-                Assert.False(string.IsNullOrWhiteSpace(listing.Name));
-            }
-        }
 
-        [Fact]
-        public void Search_USD_ResultsFound()
+        public async void Search_USD_ResultsFound()
         {
             //Given
+            const int MAX_RESULTS = 120;
             Shop shop = new Shop();
-            shop.Initiate(Currency.USD);
+            shop.UseProxy = false;
+            shop.Initialize();
             //When
-            Task<IEnumerable<ProductListing>> listingsTask = shop.Search("mpu6050", 1);
-            listingsTask.Wait();
-            IEnumerable<ProductListing> listings = listingsTask.Result;
+            shop.SetupSession("mpu6050", Currency.USD);
             //Then
-            Assert.NotEmpty(listings);
-            foreach (ProductListing listing in listings)
+
+            int count = 0;
+            await foreach (ProductListing listing in shop)
             {
                 Assert.False(string.IsNullOrWhiteSpace(listing.Name));
                 Assert.True(listing.LowerPrice != 0);
+                count += 1;
+                if (count > MAX_RESULTS) return;
             }
         }
     }

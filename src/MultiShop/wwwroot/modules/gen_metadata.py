@@ -4,9 +4,10 @@ import json
 modulepaths = []
 
 for content in os.listdir(os.getcwd()):
-    if (os.path.isfile(content) and os.path.splitext(content)[1] == ".dll"):
-        print("Adding \"{0}\" to list of modules.".format(content))
-        modulepaths.append(content)
+    components = os.path.splitext(content)
+    if (os.path.isfile(content) and  components[1] == ".dll"):
+        print("Adding \"{0}\" to list of modules.".format(components[0]))
+        modulepaths.append(components[0])
 
 file = open("modules_content.json", "w")
 json.dump(modulepaths, file, sort_keys=True, indent=4)

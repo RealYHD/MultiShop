@@ -1,0 +1,65 @@
+@using SimpleLogger
+@typeparam TItem
+@inject IJSRuntime JS
+
+<ul class=@ListGroupCss style="width: max-content;" @ref="dragAndDrop">
+    @foreach (TItem item in Items)
+    {
+        <li class="list-group-item list-group-item-hover" draggable="true" @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
+            <span class="mx-1 oi oi-elevator"></span>
+            @DraggableItem(item)
+        </li>
+    }
+</ul>
+
+
+@code {
+    [Parameter]
+    public List<TItem> Items { get; set; }
+
+    [Parameter]
+    public string AdditionalListClasses { get; set; }
+
+    [Parameter]
+    public EventCallback OnOrderChange { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> DraggableItem { get; set; }
+
+    private ElementReference dragAndDrop;
+
+    private int itemDraggedIndex = -1;
+
+
+    private string ListGroupCss
+    {
+        get => "list-group " + AdditionalListClasses;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AdditionalListClasses = AdditionalListClasses ?? "";
+        await base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("dragAndDropList", dragAndDrop);
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+
+    private async Task OnDrop(TItem dropped)
+    {
+        TItem item = Items[itemDraggedIndex];
+        if (item.Equals(dropped)) return;
+        int indexOfDrop = Items.IndexOf(dropped);
+        Items.RemoveAt(itemDraggedIndex);
+        Items.Insert(indexOfDrop, item);
+        itemDraggedIndex = -1;
+        await OnOrderChange.InvokeAsync();
+    }
+}
