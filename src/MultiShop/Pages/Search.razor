@@ -2,12 +2,12 @@
 @using Microsoft.Extensions.Configuration
 @using ShopFramework
 @using SimpleLogger
-@using SearchStructures
+@using DataStructures
 @inject HttpClient Http
 @inject IConfiguration Configuration
 @inject IJSRuntime js
 
-@* TODO: Finish sorting, move things to individual components where possible, key search results. *@
+@* TODO: Add buttons for the order changing. Add main page. *@
 
 <div class="my-2">
     <div class="input-group my-2">
@@ -178,7 +178,28 @@
 </div>
 
 <div class="my-3 py-2">
-    <div class="d-flex flex-wrap justify-content-between" style="width: 100%; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: lightgray;">
+    <div class="d-inline-flex" style="width: 100%; border-bottom-style: solid; border-bottom-width: 1px; border-color: lightgray;">
+        <button type="button" class=@ToggleResultsConfigurationcss @onclick="@(() => showResultsConfiguration = !showResultsConfiguration)"><span class="oi oi-sort-descending"></span></button>
+    </div>
+    @if (showResultsConfiguration)
+    {
+        <div style="border-color: lightgray;" class="p-1">
+            <div class="card m-2" style="max-width: 23em;">
+                <div class="card-body">
+                    <h5 class="card-title">Results Order</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">What's important to you?</h6>
+                    <p class="card-text">The results will be sorted by the top category. If the compared results are equal or don't have a value for that category, the next category on the list will be used and so on.</p>
+                    <DragAndDropList Items="@(activeResultsProfile.Order)" Context="item" AdditionalListClasses="mx-auto" OnOrderChange="@(async () => await Organize(activeResultsProfile.Order))">
+                        <DraggableItem>
+                            @(item.FriendlyName())
+                        </DraggableItem>
+                    </DragAndDropList>
+                </div>
+            </div>
+        </div>        
+    }
+
+    <div class="d-flex flex-wrap" style="width: 100%; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: lightgray;">
         <div class="align-self-end">
             @if (searching)
             {
@@ -220,19 +241,6 @@
                 <span class="text-muted">Search for something to see the results!</span>
             }
         </div>
-        <CustomDropdown AdditionalButtonClasses="btn-outline-secondary btn-tab" Justify="right">
-            <ButtonContent>
-                <span class="oi oi-sort-descending"></span>
-            </ButtonContent>
-            <DropdownContent>
-                <DragAndDropList Items="@(activeResultsProfile.Order)" Context="item" AdditionalListClasses="list-group-empty-top-left" OnOrderChange="@(async () => await Organize(activeResultsProfile.Order))">
-                    <DraggableItem>
-                        @(item.FriendlyName())
-                    </DraggableItem>
-                </DragAndDropList>
-            </DropdownContent>
-        </CustomDropdown>
-
     </div>
     <div>
         <ListingTableView Products="@listings" />
@@ -251,9 +259,15 @@
     private ResultsProfile activeResultsProfile = new ResultsProfile();
 
     private bool showSearchConfiguration = false;
+    private bool showResultsConfiguration = false;
+
     private string ToggleSearchConfigButtonCss
     {
         get => "btn btn-outline-secondary" + (showSearchConfiguration ? " active" : "");
+    }
+
+    private string ToggleResultsConfigurationcss {
+        get => "btn btn-outline-secondary btn-tab" + (showResultsConfiguration ? " active" : "");
     }
 
     private bool searched = false;
@@ -306,7 +320,8 @@
                 await foreach (ProductListing listing in Shops[shopName])
                 {
                     resultsChecked += 1;
-                    if (resultsChecked % 50 == 0) {
+                    if (resultsChecked % 50 == 0)
+                    {
                         StateHasChanged();
                         await Task.Yield();
                     }
@@ -355,7 +370,7 @@
         }
         searching = false;
         searched = true;
-        
+
         foreach (ResultsProfile.Category c in greatest.Keys)
         {
             foreach (ProductListingInfo info in greatest[c])
@@ -373,19 +388,20 @@
         organizing = true;
         StateHasChanged();
 
-        List<ProductListingInfo> sortedResults = await Task.Run<List<ProductListingInfo>>(() => {
+        List<ProductListingInfo> sortedResults = await Task.Run<List<ProductListingInfo>>(() =>
+        {
             List<ProductListingInfo> sorted = new List<ProductListingInfo>(listings);
             sorted.Sort((a, b) =>
-            {
-                foreach (ResultsProfile.Category category in activeResultsProfile.Order)
-                {
-                    int? compareResult = category.CompareListings(a, b);
-                    if (compareResult.HasValue && compareResult.Value != 0)
-                    {
-                        return -compareResult.Value;
-                    }
-                }
-                return 0;
+    {
+    foreach (ResultsProfile.Category category in activeResultsProfile.Order)
+    {
+        int? compareResult = category.CompareListings(a, b);
+        if (compareResult.HasValue && compareResult.Value != 0)
+        {
+            return -compareResult.Value;
+        }
+    }
+    return 0;
             });
             return sorted;
         });

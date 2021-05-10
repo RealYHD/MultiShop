@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MultiShop.SearchStructures
+namespace MultiShop.DataStructures
 {
     public class ResultsProfile
     {

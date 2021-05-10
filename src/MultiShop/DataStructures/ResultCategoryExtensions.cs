@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel;
 using MultiShop.ShopFramework;
 
-namespace MultiShop.SearchStructures
+namespace MultiShop.DataStructures
 {
     public static class ResultCategoryExtensions
     {

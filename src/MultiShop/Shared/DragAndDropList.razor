@@ -5,9 +5,16 @@
 <ul class=@ListGroupCss style="width: max-content;" @ref="dragAndDrop">
     @foreach (TItem item in Items)
     {
-        <li class="list-group-item list-group-item-hover" draggable="true" @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
-            <span class="mx-1 oi oi-elevator"></span>
-            @DraggableItem(item)
+        <li class="list-group-item" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
+            <div class="d-inline-flex">
+                <div class="mr-3">
+                    <button class="btn" type="button" style="padding: 0px;" @onclick="@(() => OnButtonClickMove(Items.IndexOf(item), true))" disabled="@(processingDropChange || Items.IndexOf(item) <= 0)"><span class="oi oi-caret-top"></span></button>
+                    <button class="btn" type="button" style="padding: 0px;" @onclick="@(() => OnButtonClickMove(Items.IndexOf(item), false))" disabled="@(processingDropChange || Items.IndexOf(item) >= Items.Count - 1)"><span class="oi oi-caret-bottom"></span></button>
+                </div>
+                <div>
+                    @DraggableItem(item)
+                </div>
+            </div>
         </li>
     }
 </ul>
@@ -29,6 +36,7 @@
     private ElementReference dragAndDrop;
 
     private int itemDraggedIndex = -1;
+    private bool processingDropChange = false;
 
 
     private string ListGroupCss
@@ -54,12 +62,28 @@
 
     private async Task OnDrop(TItem dropped)
     {
-        TItem item = Items[itemDraggedIndex];
-        if (item.Equals(dropped)) return;
-        int indexOfDrop = Items.IndexOf(dropped);
-        Items.RemoveAt(itemDraggedIndex);
-        Items.Insert(indexOfDrop, item);
+        int dragIndex = itemDraggedIndex;
         itemDraggedIndex = -1;
+        await MoveOrder(dragIndex, Items.IndexOf(dropped));
+    }
+
+    private async Task OnButtonClickMove(int index, bool up) {
+        if (up) {
+            await MoveOrder(index, index - 1);
+        } else {
+            await MoveOrder(index, index + 1);
+        }
+    }
+
+    private async Task MoveOrder(int from, int to)
+    {
+        Logger.Log($"Attempting to move from {from} to {to}.", LogLevel.Debug);
+        if (from == to || from >= Items.Count || from < 0 || to > Items.Count || to < 0) return;
+        TItem item = Items[from];
+        Items.RemoveAt(from);
+        Items.Insert(to, item);
+        processingDropChange = true;
         await OnOrderChange.InvokeAsync();
+        processingDropChange = false;
     }
 }

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using MultiShop.ShopFramework;
 
-namespace MultiShop.SearchStructures
+namespace MultiShop.DataStructures
 {
     public class ProductListingInfo
     {
