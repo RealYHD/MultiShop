@@ -2,7 +2,7 @@ using System;
 using SimpleLogger;
 using Xunit.Abstractions;
 
-namespace AliExpressShop
+namespace BanggoodShop
 {
     public class XUnitLogger : ILogReceiver
     {

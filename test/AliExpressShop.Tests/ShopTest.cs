@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using GameServiceWarden.Core.Tests;
 using MultiShop.ShopFramework;
 using SimpleLogger;
 using Xunit;
@@ -34,10 +30,10 @@ namespace AliExpressShop.Tests
                 count += 1;
                 if (count > MAX_RESULTS) return;
             }
+            shop.Dispose();
         }
 
         [Fact]
-
         public async void Search_USD_ResultsFound()
         {
             //Given
@@ -57,6 +53,7 @@ namespace AliExpressShop.Tests
                 count += 1;
                 if (count > MAX_RESULTS) return;
             }
+            shop.Dispose();
         }
     }
 }

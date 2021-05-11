@@ -70,7 +70,7 @@ namespace MultiShop.DataStructures
 
                 set
                 {
-                    if (value == false && !CanDisableShop()) return;
+                    if (value == false && !(shopsEnabled.Count > 1)) return;
                     if (value)
                     {
                         shopsEnabled.Add(name);
@@ -81,8 +81,8 @@ namespace MultiShop.DataStructures
                     }
                 }
             }
-            public bool CanDisableShop() {
-                return shopsEnabled.Count > 1;
+            public bool IsToggleable(string shop) {
+                return (shopsEnabled.Contains(shop) && shopsEnabled.Count > 1) || !shopsEnabled.Contains(shop);
             }
         }
     }

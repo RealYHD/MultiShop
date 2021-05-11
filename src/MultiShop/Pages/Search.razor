@@ -109,7 +109,7 @@
                         @foreach (string shop in Shops.Keys)
                         {
                             <div class="form-group form-check my-2">
-                                <input class="form-check-input" type="checkbox" id=@(shop + "Checkbox") @bind="activeProfile.shopStates[shop]" disabled="@(!activeProfile.shopStates.CanDisableShop())">
+                                <input class="form-check-input" type="checkbox" id=@(shop + "Checkbox") @bind="activeProfile.shopStates[shop]" disabled="@(!activeProfile.shopStates.IsToggleable(shop))">
                                 <label class="form-check-label" for=@(shop + "Checkbox")>@shop enabled</label>
                             </div>
                         }
@@ -330,7 +330,7 @@
                     if (listing.Shipping == null && !activeProfile.keepUnknownShipping || (activeProfile.enableMaxShippingFee && listing.Shipping > activeProfile.MaxShippingFee)) continue;
                     float shippingDifference = listing.Shipping != null ? listing.Shipping.Value : 0;
                     if (!(listing.LowerPrice + shippingDifference >= activeProfile.lowerPrice && (!activeProfile.enableUpperPrice || listing.UpperPrice + shippingDifference <= activeProfile.UpperPrice))) continue;
-                    if ((listing.Rating == null && !activeProfile.keepUnrated) || activeProfile.minRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
+                    if ((listing.Rating == null && !activeProfile.keepUnrated) && activeProfile.minRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
                     if ((listing.PurchaseCount == null && !activeProfile.keepUnknownPurchaseCount) || activeProfile.minPurchases > (listing.PurchaseCount == null ? 0 : listing.PurchaseCount)) continue;
                     if ((listing.ReviewCount == null && !activeProfile.keepUnknownRatingCount) || activeProfile.minReviews > (listing.ReviewCount == null ? 0 : listing.ReviewCount)) continue;
 

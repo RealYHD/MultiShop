@@ -25,6 +25,7 @@
     private bool modulesLoaded = false;
 
     private Dictionary<string, IShop> shops = new Dictionary<string, IShop>();
+    private Dictionary<string, Assembly> unusedDependencies = new Dictionary<string, Assembly>();
         
     protected override async Task OnInitializedAsync()
     {
@@ -48,7 +49,7 @@
         foreach (Task<byte[]> task in assemblyDownloadTasks)
         {
             Assembly assembly = AppDomain.CurrentDomain.Load(await task);
-
+            bool assigned = false;
             foreach (Type type in assembly.GetTypes())
             {
                 if (typeof(IShop).IsAssignableFrom(type)) {
@@ -58,17 +59,34 @@
                         shops.Add(shop.ShopName, shop);
                         Logger.Log($"Registered and started lifetime of module for \"{shop.ShopName}\".", LogLevel.Debug);
                     } 
+                    assigned = true;
                 }
             }
+            if (!assigned) {
+                unusedDependencies.Add(assembly.FullName, assembly);
+                Logger.Log($"Assembly \"{assembly.FullName}\" did not contain a shop module. Storing it as potential extension.", LogLevel.Debug);
+            }
         }
-
+        foreach (string assembly in unusedDependencies.Keys)
+        {
+            Logger.Log($"{assembly} was unused.", LogLevel.Warning);
+        }
+        unusedDependencies.Clear();
         modulesLoaded = true;
     }
 
     
     private Assembly OnAssemblyDependencyRequest(object sender, ResolveEventArgs args) {
-        Logger.Log($"Assembly {args.RequestingAssembly} is requesting dependency assembly {args.Name}. Attempting to retrieve...", LogLevel.Debug);
-        return AppDomain.CurrentDomain.Load(Http.GetByteArrayAsync(Configuration["ModulesDir"] + args.Name + ".dll").Result);
+        Logger.Log($"Assembly {args.RequestingAssembly} is requesting dependency assembly {args.Name}.", LogLevel.Debug);
+        if (unusedDependencies.ContainsKey(args.Name))
+        {
+            Logger.Log("Dependency found.", LogLevel.Debug);
+            Assembly dependency = unusedDependencies[args.Name];
+            unusedDependencies.Remove(args.Name);
+            return dependency;
+        }
+        Logger.Log($"No dependency under name {args.Name}", LogLevel.Debug);
+        return null;
     }
 
 
