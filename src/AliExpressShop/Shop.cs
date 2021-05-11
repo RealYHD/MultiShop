@@ -64,7 +64,7 @@ namespace AliExpressShop
 
         public IAsyncEnumerator<ProductListing> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            return new ShopEnumerator(query, currency, http, UseProxy);
+            return new ShopEnumerator(cancellationToken, query, currency, http, UseProxy);
         }
     }
 }

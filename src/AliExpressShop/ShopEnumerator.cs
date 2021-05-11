@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using GameServiceWarden.Core.Collection;
 using MultiShop.ShopFramework;
@@ -13,6 +14,7 @@ namespace AliExpressShop
 {
     class ShopEnumerator : IAsyncEnumerator<ProductListing>
     {
+        private CancellationToken cancellationToken;
         private LRUCache<(string, Currency), float> conversionCache = new LRUCache<(string, Currency), float>();
         private string query;
         private Currency currency;
@@ -24,8 +26,9 @@ namespace AliExpressShop
 
         public ProductListing Current {get; private set;}
 
-        public ShopEnumerator(string query, Currency currency, HttpClient http, bool useProxy = true)
+        public ShopEnumerator(CancellationToken cancellationToken, string query, Currency currency, HttpClient http, bool useProxy = true)
         {
+            this.cancellationToken = cancellationToken;
             this.query = query;
             this.currency = currency;
             this.http = http;
@@ -64,19 +67,20 @@ namespace AliExpressShop
             double waitTime = DELAY - (DateTime.Now - start).TotalMilliseconds;
             if (waitTime > 0) {
                 Logger.Log($"Delaying next page by {waitTime}ms.", LogLevel.Debug);
-                await Task.Delay((int)Math.Ceiling(waitTime));
+                await Task.Delay((int)Math.Ceiling(waitTime), cancellationToken);
             }
 
             Logger.Log($"Sending GET request with uri: {request.RequestUri}", LogLevel.Debug);
-            HttpResponseMessage response = await http.SendAsync(request);
+            HttpResponseMessage response = await http.SendAsync(request, cancellationToken);
             start = DateTime.Now;
             
             string data = null;
-            using (StreamReader reader = new StreamReader(await response.Content.ReadAsStreamAsync()))
+            using (StreamReader reader = new StreamReader(await response.Content.ReadAsStreamAsync(cancellationToken)))
             {
                 string line = null;
                 while ((line = await reader.ReadLineAsync()) != null && data == null)
                 {
+                    if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException();
                     if (dataLineRegex.IsMatch(line)) {
                         data = line.Trim();
                         Logger.Log($"Found line with listing data.", LogLevel.Debug);
@@ -229,9 +233,9 @@ namespace AliExpressShop
         private async Task<float> FetchConversion(string from, Currency to) {
             if (from.Equals(to.ToString())) return 1;
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, string.Format("https://api.exchangerate.host/convert?from={0}&to={1}", from, to));
-            HttpResponseMessage response = await http.SendAsync(request);
+            HttpResponseMessage response = await http.SendAsync(request, cancellationToken);
             string results = null;
-            using (StreamReader reader = new StreamReader(await response.Content.ReadAsStreamAsync()))
+            using (StreamReader reader = new StreamReader(await response.Content.ReadAsStreamAsync(cancellationToken)))
             {
                 results = await reader.ReadToEndAsync();
             }
