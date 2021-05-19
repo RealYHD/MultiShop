@@ -11,8 +11,9 @@ namespace MultiShop.DataStructures
             switch (category)
             {
                 case ResultsProfile.Category.RatingPriceRatio:
-                    float dealDiff = a.RatingToPriceRatio - b.RatingToPriceRatio;
-                    int dealCeil = (int)Math.Ceiling(Math.Abs(dealDiff));
+                    float? dealDiff = a.RatingToPriceRatio - b.RatingToPriceRatio;
+                    if (!dealDiff.HasValue) return null;
+                    int dealCeil = (int)Math.Ceiling(Math.Abs(dealDiff.Value));
                     return dealDiff < 0 ? -dealCeil : dealCeil;
                 case ResultsProfile.Category.Price:
                     float priceDiff = b.Listing.UpperPrice - a.Listing.UpperPrice;

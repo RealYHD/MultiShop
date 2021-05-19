@@ -7,8 +7,7 @@
 @inject IConfiguration Configuration
 @inject IJSRuntime js
 
-@* TODO: Add buttons for the order changing. Add main page. *@
-
+@* TODO: Split C# code into a partial class. *@
 <div class="my-2">
     <div class="input-group my-2">
         <input type="text" class="form-control" placeholder="What are you looking for?" aria-label="What are you looking for?" id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await PerformSearch(Query);})" disabled="@searching">
@@ -392,16 +391,16 @@
         {
             List<ProductListingInfo> sorted = new List<ProductListingInfo>(listings);
             sorted.Sort((a, b) =>
-    {
-    foreach (ResultsProfile.Category category in activeResultsProfile.Order)
-    {
-        int? compareResult = category.CompareListings(a, b);
-        if (compareResult.HasValue && compareResult.Value != 0)
-        {
-            return -compareResult.Value;
-        }
-    }
-    return 0;
+            {
+                foreach (ResultsProfile.Category category in activeResultsProfile.Order)
+                {
+                    int? compareResult = category.CompareListings(a, b);
+                    if (compareResult.HasValue && compareResult.Value != 0)
+                    {
+                        return -compareResult.Value;
+                    }
+                }
+                return 0;
             });
             return sorted;
         });
