@@ -1,0 +1,39 @@
+﻿@using System.Reflection
+@using Microsoft.Extensions.Configuration
+@inject IHttpClientFactory HttpFactory
+@inject IConfiguration Configuration
+@implements IDisposable
+
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
+        <Found Context="routeData">
+            @if (modulesLoaded)
+            {
+                <CascadingValue Value="shops" Name="Shops">
+                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" Context="authState">
+                        <NotAuthorized>
+                            @if (!authState.User.Identity.IsAuthenticated)
+                            {
+                                <RedirectToLogin />
+                            }
+                            else
+                            {
+                                <p>You are not authorized to access this resource.</p>
+                            }
+                        </NotAuthorized>
+                    </AuthorizeRouteView>
+                </CascadingValue>
+            }
+            else
+            {
+                <p>Loading modules...</p>
+            }
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p>Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
