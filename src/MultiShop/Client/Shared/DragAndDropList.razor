@@ -2,10 +2,10 @@
 @typeparam TItem
 @inject IJSRuntime JS
 
-<ul class=@ListGroupCss style="width: max-content;" @ref="dragAndDrop">
+<ul class=@ListGroupCss style="width: max-content;" ondragover="event.preventDefault()">
     @foreach (TItem item in Items)
     {
-        <li class="list-group-item" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
+        <li class="list-group-item list-group-item-hover" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
             <div class="d-inline-flex">
                 <div class="mr-3">
                     <button class="btn" type="button" style="padding: 0px;" @onclick="@(() => OnButtonClickMove(Items.IndexOf(item), true))" disabled="@(processingDropChange || Items.IndexOf(item) <= 0)"><span class="oi oi-caret-top"></span></button>
@@ -33,8 +33,6 @@
     [Parameter]
     public RenderFragment<TItem> DraggableItem { get; set; }
 
-    private ElementReference dragAndDrop;
-
     private int itemDraggedIndex = -1;
     private bool processingDropChange = false;
 
@@ -50,14 +48,6 @@
         await base.OnParametersSetAsync();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("dragAndDropList", dragAndDrop);
-        }
-        await base.OnAfterRenderAsync(firstRender);
-    }
 
 
     private async Task OnDrop(TItem dropped)
