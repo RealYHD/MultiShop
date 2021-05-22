@@ -147,14 +147,9 @@ namespace MultiShop.Client.Pages
 
         private async Task Organize(List<ResultsProfile.Category> order)
         {
-            if (searching) return;
+            if (searching || listings.Count <= 1) return;
             organizing = true;
-            StateHasChanged();
-            
-            List<ProductListingInfo> sortedResults = await Task.Run<List<ProductListingInfo>>(() =>
-            {
-                List<ProductListingInfo> sorted = new List<ProductListingInfo>(listings);
-                sorted.Sort((a, b) =>
+            Comparison<ProductListingInfo> comparer = (a, b) =>
                 {
                     foreach (ResultsProfile.Category category in activeResultsProfile.Order)
                     {
@@ -165,11 +160,52 @@ namespace MultiShop.Client.Pages
                         }
                     }
                     return 0;
-                });
-                return sorted;
-            });
-            listings.Clear();
-            listings.AddRange(sortedResults);
+                };
+
+            Func<(int, int), Task<int>> partition = async (ilh) => {
+                ProductListingInfo swapTemp;
+                ProductListingInfo pivot = listings[ilh.Item2];
+                int lastSwap = ilh.Item1 - 1;
+                for (int j = ilh.Item1; j <= ilh.Item2 - 1; j++)
+                {
+                    if (comparer.Invoke(listings[j], pivot) <= 0) {
+                        lastSwap += 1;
+                        swapTemp = listings[lastSwap];
+                        listings[lastSwap] = listings[j];
+                        listings[j] = swapTemp;
+                    }
+                    await Task.Yield();
+                }
+                swapTemp = listings[lastSwap+1];
+                listings[lastSwap+1] = listings[ilh.Item2];
+                listings[ilh.Item2] = swapTemp;
+                return lastSwap + 1;
+            };
+
+            Func<(int, int), Task> quickSort = async (ilh) => {
+                Stack<(int, int)> iterativeStack = new Stack<(int, int)>();
+                iterativeStack.Push(ilh);
+                
+                while (iterativeStack.Count > 0)
+                {
+                    (int, int) lh = iterativeStack.Pop();
+                    int p = await partition.Invoke((lh.Item1, lh.Item2));
+
+                    if (p - 1 > lh.Item1) {
+                        iterativeStack.Push((lh.Item1, p - 1));
+                    }
+
+                    if (p + 1 < lh.Item2) {
+                        iterativeStack.Push((p + 1, lh.Item2));
+                    }
+
+                    await Task.Yield();
+                }
+            };
+            StateHasChanged();
+
+            await quickSort((0, listings.Count - 1));
+
             organizing = false;
             StateHasChanged();
         }
