@@ -1,3 +1,13 @@
 tbody > tr > th > div {
     width: 45em;
 }
+
+.table.table thead th {
+    border-top-style: none;
+}
+
+.btn.btn-tab {
+    border-bottom-style: none; 
+    border-bottom-left-radius: 0em;
+    border-bottom-right-radius: 0em;
+}

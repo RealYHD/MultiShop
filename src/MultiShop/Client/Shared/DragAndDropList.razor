@@ -5,7 +5,7 @@
 <ul class=@ListGroupCss style="width: max-content;" ondragover="event.preventDefault()">
     @foreach (TItem item in Items)
     {
-        <li class="list-group-item list-group-item-hover" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
+        <li class="list-group-item" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
             <div class="d-inline-flex">
                 <div class="mr-3">
                     <button class="btn" type="button" style="padding: 0px;" @onclick="@(() => OnButtonClickMove(Items.IndexOf(item), true))" disabled="@(processingDropChange || Items.IndexOf(item) <= 0)"><span class="oi oi-caret-top"></span></button>
