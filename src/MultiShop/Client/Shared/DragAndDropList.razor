@@ -77,7 +77,6 @@
 
     private async Task MoveOrder(int from, int to)
     {
-        Logger.Log($"Attempting to move from {from} to {to}.", LogLevel.Debug);
         if (from == to || from >= Items.Count || from < 0 || to > Items.Count || to < 0) return;
         TItem item = Items[from];
         Items.RemoveAt(from);
