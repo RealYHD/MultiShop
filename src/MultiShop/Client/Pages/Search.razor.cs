@@ -131,11 +131,14 @@ namespace MultiShop.Client.Pages
             searching = false;
             searched = true;
 
+            int tagsAdded = 0;
             foreach (ResultsProfile.Category c in greatest.Keys)
             {
                 foreach (ProductListingInfo info in greatest[c])
                 {
                     info.Tops.Add(c);
+                    tagsAdded += 1;
+                    if (tagsAdded % 50 == 0) await Task.Yield();
                 }
             }
 
@@ -147,7 +150,7 @@ namespace MultiShop.Client.Pages
             if (searching) return;
             organizing = true;
             StateHasChanged();
-
+            
             List<ProductListingInfo> sortedResults = await Task.Run<List<ProductListingInfo>>(() =>
             {
                 List<ProductListingInfo> sorted = new List<ProductListingInfo>(listings);
