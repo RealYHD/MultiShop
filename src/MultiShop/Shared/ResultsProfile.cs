@@ -24,9 +24,9 @@ namespace MultiShop.Shared
         public enum Category
         {
             RatingPriceRatio,
-            Price,
-            Purchases,
             Reviews,
+            Purchases,
+            Price,
         }
     }
 }

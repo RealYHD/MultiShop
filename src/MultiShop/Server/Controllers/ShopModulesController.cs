@@ -26,7 +26,7 @@ namespace MultiShop.Server.Controllers
             ShopOptions options = configuration.GetSection(ShopOptions.Shop).Get<ShopOptions>();
             foreach (string file in Directory.EnumerateFiles(options.Directory))
             {
-                if (Path.GetExtension(file).ToLower().Equals(".dll") && !options.Disabled.Contains(Path.GetFileNameWithoutExtension(file))) {
+                if (Path.GetExtension(file).ToLower().Equals(".dll") && !(options.Disabled != null && options.Disabled.Contains(Path.GetFileNameWithoutExtension(file)))) {
                     yield return Path.GetFileNameWithoutExtension(file);
                 }
             }
@@ -40,7 +40,7 @@ namespace MultiShop.Server.Controllers
             string shopPath = Path.Join(options.Directory, shopModuleName);
             shopPath += ".dll";
             if (!System.IO.File.Exists(shopPath)) return NotFound();
-            if (options.Disabled.Contains(shopModuleName)) return Forbid();
+            if (options.Disabled != null && options.Disabled.Contains(shopModuleName)) return Forbid();
             return File(new FileStream(shopPath, FileMode.Open), "application/shop-dll");
         }
     }
