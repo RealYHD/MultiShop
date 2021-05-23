@@ -12,7 +12,18 @@
 </head>
 
 <body>
-    <div id="app">Loading...</div>
+    <div id="app">
+        <div class="d-flex flex-column align-items-center justify-content-center" style="width: 100vw; height: 100vh;">
+            <div class="my-1">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+            <div class="my-1 text-muted">
+                Loading app...
+            </div>
+        </div>
+    </div>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
