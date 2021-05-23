@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Threading.Tasks;
 using MultiShop.Shop.Framework;
 using SimpleLogger;
@@ -34,7 +32,7 @@ namespace MultiShop.Client
             foreach (string assemblyFileName in assemblyFileNames)
             {
                 Logger.Log($"Downloading \"{assemblyFileName}\"...", LogLevel.Debug);
-                downloadTasks.Add(http.GetByteArrayAsync(Path.Join("ShopModules", assemblyFileName + ".dll")), assemblyFileName);
+                downloadTasks.Add(http.GetByteArrayAsync(Path.Join("ShopModules", assemblyFileName)), assemblyFileName);
             }
 
             while (downloadTasks.Count != 0)

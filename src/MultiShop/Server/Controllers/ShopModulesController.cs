@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using MultiShop.Server.Options;
 
 namespace MultiShop.Server.Controllers
 {
@@ -22,9 +23,10 @@ namespace MultiShop.Server.Controllers
         }
         
         public IEnumerable<string> GetShopModuleNames() {
-            foreach (string file in Directory.EnumerateFiles(configuration["ModulesDir"]))
+            ShopOptions options = configuration.GetSection(ShopOptions.Shop).Get<ShopOptions>();
+            foreach (string file in Directory.EnumerateFiles(options.Directory))
             {
-                if (Path.GetExtension(file).ToLower().Equals(".dll")) {
+                if (Path.GetExtension(file).ToLower().Equals(".dll") && !options.Disabled.Contains(Path.GetFileNameWithoutExtension(file))) {
                     yield return Path.GetFileNameWithoutExtension(file);
                 }
             }
@@ -34,8 +36,11 @@ namespace MultiShop.Server.Controllers
         [HttpGet]
         [Route("{shopModuleName}")]
         public ActionResult GetModule(string shopModuleName) {
-            string shopPath = Path.Join(configuration["ModulesDir"], shopModuleName);
+            ShopOptions options = configuration.GetSection(ShopOptions.Shop).Get<ShopOptions>();
+            string shopPath = Path.Join(options.Directory, shopModuleName);
+            shopPath += ".dll";
             if (!System.IO.File.Exists(shopPath)) return NotFound();
+            if (options.Disabled.Contains(shopModuleName)) return Forbid();
             return File(new FileStream(shopPath, FileMode.Open), "application/shop-dll");
         }
     }

@@ -1,4 +1,13 @@
-﻿<nav class="navbar navbar-expand-lg navbar-light bg-light">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Configuration
+
+@inject NavigationManager Navigation
+@inject SignOutSessionStateManager SignOutManager
+@inject IConfiguration Configuration
+
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
     <a class="navbar-brand" href="">
         <img src="100x100.png" width="30" height="30" class="d-inline-block align-top">
         MultiShop
@@ -20,6 +29,19 @@
                 </NavLink>
             </li>
         </ul>
+        <AuthorizeView Context="auth">
+            <Authorized>
+                <a href="authentication/profile">Hello, @auth.User.Identity.Name!</a>
+                <button class="nav-link btn btn-link" @onclick="BeginSignOut">Log out</button>
+            </Authorized>
+            <NotAuthorized>
+                @if (Configuration["IdentityServer:Registration"].Equals("enabled"))
+                {
+                    <a class="mx-1" href="authentication/register">Register</a>
+                }
+                <a class="mx-1" href="authentication/login">Log in</a>
+            </NotAuthorized>
+        </AuthorizeView>
     </div>
 </nav>
 
@@ -32,4 +54,11 @@
     {
         collapseNavMenu = !collapseNavMenu;
     }
+
+    private async Task BeginSignOut(MouseEventArgs args)
+    {
+        await SignOutManager.SetSignOutState();
+        Navigation.NavigateTo("authentication/logout");
+    }
+
 }

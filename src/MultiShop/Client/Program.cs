@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleLogger;
+using System.Net.Http.Json;
 
 namespace MultiShop.Client
 {
@@ -21,10 +22,21 @@ namespace MultiShop.Client
 
             builder.Services.AddHttpClient("MultiShop.ServerAPI", client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)).AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
 
-            builder.Services.AddHttpClient("Public-MultiShop.ServerAPI", client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress));
-
             // Supply HttpClient instances that include access tokens when making requests to the server project
             builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("MultiShop.ServerAPI"));
+            Action<HttpClient> configureClient = client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+
+            builder.Services.AddHttpClient("Public-MultiShop.ServerAPI", configureClient);
+
+
+            IReadOnlyDictionary<string, string> webApiConfig = null;
+            using (HttpClient client = new HttpClient())
+            {
+                configureClient.Invoke(client);
+                webApiConfig = await client.GetFromJsonAsync<IReadOnlyDictionary<string, string>>("PublicApiSettings");
+            }
+
+            builder.Configuration.AddInMemoryCollection(webApiConfig);
 
             builder.Services.AddApiAuthorization();
 
