@@ -72,7 +72,7 @@ namespace MultiShop.Client
             }
             foreach (string assembly in assemblyData.Keys)
             {
-                Logger.Log($"{assembly} was unused.", LogLevel.Warning);
+                Logger.Log($"\"{assembly}\" was unused.", LogLevel.Warning);
             }
             foreach (string assembly in assemblyCache.Keys)
             {
