@@ -1,71 +1,95 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using MultiShop.Shared;
+using Microsoft.AspNetCore.Components.Authorization;
+using MultiShop.Client.Extensions.Models;
+using MultiShop.Client.Listing;
+using MultiShop.Shared.Models;
 using MultiShop.Shop.Framework;
 using SimpleLogger;
 
 namespace MultiShop.Client.Pages
 {
-    public partial class Search
+    public partial class Search : IAsyncDisposable
     {
+        [CascadingParameter]
+        Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
         [CascadingParameter(Name = "Shops")]
         public Dictionary<string, IShop> Shops { get; set; }
 
         [Parameter]
         public string Query { get; set; }
 
-        private SearchProfile activeProfile = new SearchProfile();
-        private ResultsProfile activeResultsProfile = new ResultsProfile();
+        [Inject]
+        private HttpClient Http { get; set; }
 
-        private bool showSearchConfiguration = false;
-        private bool showResultsConfiguration = false;
+        private Status status = new Status();
 
-        private string ToggleSearchConfigButtonCss
-        {
-            get => "btn btn-outline-secondary" + (showSearchConfiguration ? " active" : "");
-        }
+        private Dictionary<Views, ListingView> listingViews;
 
-        private string ToggleResultsConfigurationcss {
-            get => "btn btn-outline-secondary btn-tab" + (showResultsConfiguration ? " active" : "");
-        }
+        private Views CurrentView = Views.Table;
 
-        private bool searched = false;
-        private bool searching = false;
-        private bool organizing = false;
+        private SearchProfile activeSearchProfile;
+        private ResultsProfile activeResultsProfile;
 
-        private int resultsChecked = 0;
         private List<ProductListingInfo> listings = new List<ProductListingInfo>();
-
-        protected override void OnInitialized()
-        {
-            foreach (string shop in Shops.Keys)
-            {
-                activeProfile.shopStates[shop] = true;
-            }
-            base.OnInitialized();
-        }
+        private int resultsChecked = 0;
 
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
+
+            AuthenticationState authState = await AuthenticationStateTask;
+
+            listingViews = new Dictionary<Views, ListingView>() {
+                {Views.Table, new TableView(status)}
+            };
+
+            if (authState.User.Identity.IsAuthenticated) {
+                Logger.Log($"User \"{authState.User.Identity.Name}\" is authenticated. Checking for saved profiles.", LogLevel.Debug);
+                HttpResponseMessage searchProfileResponse = await Http.GetAsync("Profile/Search");
+                if (searchProfileResponse.IsSuccessStatusCode) {
+                    activeSearchProfile = await searchProfileResponse.Content.ReadFromJsonAsync<SearchProfile>();
+                    Logger.Log("Received: " + await searchProfileResponse.Content.ReadAsStringAsync());
+                    Logger.Log("Serialized then deserialized: " + JsonSerializer.Serialize(activeSearchProfile));
+                } else {
+                    Logger.Log("Could not load search profile from server. Using default.", LogLevel.Warning);
+                    activeSearchProfile = new SearchProfile();
+                }
+
+                HttpResponseMessage resultsProfileResponse = await Http.GetAsync("Profile/Results");
+                if (resultsProfileResponse.IsSuccessStatusCode) {
+                    activeResultsProfile = await resultsProfileResponse.Content.ReadFromJsonAsync<ResultsProfile>();
+                } else {
+                    Logger.Log("Could not load results profile from server.", LogLevel.Debug);
+                    activeResultsProfile = new ResultsProfile();
+                }
+            } else {
+                activeSearchProfile = new SearchProfile();
+                activeResultsProfile = new ResultsProfile();
+            }
+            activeSearchProfile.ShopStates.TotalShops = Shops.Count;
         }
 
         protected override async Task OnParametersSetAsync()
         {
+            await base.OnParametersSetAsync();
             if (!string.IsNullOrEmpty(Query))
             {
                 await PerformSearch(Query);
             }
-            await base.OnParametersSetAsync();
         }
 
         private async Task PerformSearch(string query)
         {
             if (string.IsNullOrWhiteSpace(query)) return;
-            if (searching) return;
-            searching = true;
+            if (status.Searching) return;
+            status.Searching = true;
             Logger.Log($"Received search request for \"{query}\".", LogLevel.Debug);
             resultsChecked = 0;
             listings.Clear();
@@ -73,10 +97,10 @@ namespace MultiShop.Client.Pages
             List<ProductListingInfo>>();
             foreach (string shopName in Shops.Keys)
             {
-                if (activeProfile.shopStates[shopName])
+                if (activeSearchProfile.ShopStates[shopName])
                 {
                     Logger.Log($"Querying \"{shopName}\" for products.");
-                    Shops[shopName].SetupSession(query, activeProfile.currency);
+                    Shops[shopName].SetupSession(query, activeSearchProfile.Currency);
                     int shopViableResults = 0;
                     await foreach (ProductListing listing in Shops[shopName])
                     {
@@ -88,12 +112,12 @@ namespace MultiShop.Client.Pages
                         }
 
 
-                        if (listing.Shipping == null && !activeProfile.keepUnknownShipping || (activeProfile.enableMaxShippingFee && listing.Shipping > activeProfile.MaxShippingFee)) continue;
+                        if (listing.Shipping == null && !activeSearchProfile.KeepUnknownShipping || (activeSearchProfile.EnableMaxShippingFee && listing.Shipping > activeSearchProfile.MaxShippingFee)) continue;
                         float shippingDifference = listing.Shipping != null ? listing.Shipping.Value : 0;
-                        if (!(listing.LowerPrice + shippingDifference >= activeProfile.lowerPrice && (!activeProfile.enableUpperPrice || listing.UpperPrice + shippingDifference <= activeProfile.UpperPrice))) continue;
-                        if ((listing.Rating == null && !activeProfile.keepUnrated) && activeProfile.minRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
-                        if ((listing.PurchaseCount == null && !activeProfile.keepUnknownPurchaseCount) || activeProfile.minPurchases > (listing.PurchaseCount == null ? 0 : listing.PurchaseCount)) continue;
-                        if ((listing.ReviewCount == null && !activeProfile.keepUnknownRatingCount) || activeProfile.minReviews > (listing.ReviewCount == null ? 0 : listing.ReviewCount)) continue;
+                        if (!(listing.LowerPrice + shippingDifference >= activeSearchProfile.LowerPrice && (!activeSearchProfile.EnableUpperPrice || listing.UpperPrice + shippingDifference <= activeSearchProfile.UpperPrice))) continue;
+                        if ((listing.Rating == null && !activeSearchProfile.KeepUnrated) && activeSearchProfile.MinRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
+                        if ((listing.PurchaseCount == null && !activeSearchProfile.KeepUnknownPurchaseCount) || activeSearchProfile.MinPurchases > (listing.PurchaseCount == null ? 0 : listing.PurchaseCount)) continue;
+                        if ((listing.ReviewCount == null && !activeSearchProfile.KeepUnknownRatingCount) || activeSearchProfile.MinReviews > (listing.ReviewCount == null ? 0 : listing.ReviewCount)) continue;
 
                         ProductListingInfo info = new ProductListingInfo(listing, shopName);
                         listings.Add(info);
@@ -119,7 +143,7 @@ namespace MultiShop.Client.Pages
                         }
 
                         shopViableResults += 1;
-                        if (shopViableResults >= activeProfile.maxResults) break;
+                        if (shopViableResults >= activeSearchProfile.MaxResults) break;
                     }
                     Logger.Log($"\"{shopName}\" has completed. There are {listings.Count} results in total.", LogLevel.Debug);
                 }
@@ -128,8 +152,8 @@ namespace MultiShop.Client.Pages
                     Logger.Log($"Skipping {shopName} since it's disabled.");
                 }
             }
-            searching = false;
-            searched = true;
+            status.Searching = false;
+            status.Searched = true;
 
             int tagsAdded = 0;
             foreach (ResultsProfile.Category c in greatest.Keys)
@@ -145,10 +169,10 @@ namespace MultiShop.Client.Pages
             await Organize(activeResultsProfile.Order);
         }
 
-        private async Task Organize(List<ResultsProfile.Category> order)
+        private async Task Organize(IList<ResultsProfile.Category> order)
         {
-            if (searching || listings.Count <= 1) return;
-            organizing = true;
+            if (status.Searching || listings.Count <= 1) return;
+            status.Organizing = true;
             Comparison<ProductListingInfo> comparer = (a, b) =>
                 {
                     foreach (ResultsProfile.Category category in activeResultsProfile.Order)
@@ -162,13 +186,15 @@ namespace MultiShop.Client.Pages
                     return 0;
                 };
 
-            Func<(int, int), Task<int>> partition = async (ilh) => {
+            Func<(int, int), Task<int>> partition = async (ilh) =>
+            {
                 ProductListingInfo swapTemp;
                 ProductListingInfo pivot = listings[ilh.Item2];
                 int lastSwap = ilh.Item1 - 1;
                 for (int j = ilh.Item1; j <= ilh.Item2 - 1; j++)
                 {
-                    if (comparer.Invoke(listings[j], pivot) <= 0) {
+                    if (comparer.Invoke(listings[j], pivot) <= 0)
+                    {
                         lastSwap += 1;
                         swapTemp = listings[lastSwap];
                         listings[lastSwap] = listings[j];
@@ -176,26 +202,29 @@ namespace MultiShop.Client.Pages
                     }
                     await Task.Yield();
                 }
-                swapTemp = listings[lastSwap+1];
-                listings[lastSwap+1] = listings[ilh.Item2];
+                swapTemp = listings[lastSwap + 1];
+                listings[lastSwap + 1] = listings[ilh.Item2];
                 listings[ilh.Item2] = swapTemp;
                 return lastSwap + 1;
             };
 
-            Func<(int, int), Task> quickSort = async (ilh) => {
+            Func<(int, int), Task> quickSort = async (ilh) =>
+            {
                 Stack<(int, int)> iterativeStack = new Stack<(int, int)>();
                 iterativeStack.Push(ilh);
-                
+
                 while (iterativeStack.Count > 0)
                 {
                     (int, int) lh = iterativeStack.Pop();
                     int p = await partition.Invoke((lh.Item1, lh.Item2));
 
-                    if (p - 1 > lh.Item1) {
+                    if (p - 1 > lh.Item1)
+                    {
                         iterativeStack.Push((lh.Item1, p - 1));
                     }
 
-                    if (p + 1 < lh.Item2) {
+                    if (p + 1 < lh.Item2)
+                    {
                         iterativeStack.Push((p + 1, lh.Item2));
                     }
 
@@ -206,30 +235,26 @@ namespace MultiShop.Client.Pages
 
             await quickSort((0, listings.Count - 1));
 
-            organizing = false;
+            status.Organizing = false;
             StateHasChanged();
         }
 
-
-        private string GetOrNA(object data, string prepend = null, string append = null)
+        public async ValueTask DisposeAsync()
         {
-            return data != null ? (prepend + data.ToString() + append) : "N/A";
+            AuthenticationState authState = await AuthenticationStateTask;
+            if (authState.User.Identity.IsAuthenticated) {
+                await Http.PutAsJsonAsync("Profile/Search", activeSearchProfile);
+                await Http.PutAsJsonAsync("Profile/Results", activeResultsProfile);
+            }
         }
 
-        private string CategoryTags(ResultsProfile.Category c)
+        public class Status
         {
-            switch (c)
-            {
-                case ResultsProfile.Category.RatingPriceRatio:
-                    return "Best rating to price ratio";
-                case ResultsProfile.Category.Price:
-                    return "Lowest price";
-                case ResultsProfile.Category.Purchases:
-                    return "Most purchases";
-                case ResultsProfile.Category.Reviews:
-                    return "Most reviews";
-            }
-            throw new ArgumentException($"{c} does not have an associated string.");
+            public bool SearchConfiguring { get; set; }
+            public bool ResultsConfiguring { get; set; }
+            public bool Organizing { get; set; }
+            public bool Searching { get; set; }
+            public bool Searched { get; set; }
         }
     }
 }

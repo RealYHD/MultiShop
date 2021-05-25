@@ -22,20 +22,22 @@ namespace MultiShop.Server.Controllers
             this.shopAssemblyData = new Dictionary<string, byte[]>();
         }
         
-        public IEnumerable<string> GetShopModuleNames() {
+        public IActionResult GetShopModuleNames() {
+            List<string> moduleNames = new List<string>();
             ShopOptions options = configuration.GetSection(ShopOptions.Shop).Get<ShopOptions>();
             foreach (string file in Directory.EnumerateFiles(options.Directory))
             {
                 if (Path.GetExtension(file).ToLower().Equals(".dll") && !(options.Disabled != null && options.Disabled.Contains(Path.GetFileNameWithoutExtension(file)))) {
-                    yield return Path.GetFileNameWithoutExtension(file);
+                    moduleNames.Add(Path.GetFileNameWithoutExtension(file));
                 }
             }
+            return Ok(moduleNames);
         }
 
 
         [HttpGet]
         [Route("{shopModuleName}")]
-        public ActionResult GetModule(string shopModuleName) {
+        public IActionResult GetModule(string shopModuleName) {
             ShopOptions options = configuration.GetSection(ShopOptions.Shop).Get<ShopOptions>();
             string shopPath = Path.Join(options.Directory, shopModuleName);
             shopPath += ".dll";

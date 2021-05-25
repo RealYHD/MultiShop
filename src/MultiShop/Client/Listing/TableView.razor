@@ -1,0 +1,102 @@
+@using MultiShop.Shared.Models
+@using Pages
+@inherits ListingView
+
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Price</th>
+                <th scope="col">Shipping</th>
+                <th scope="col">Purchases</th>
+                <th scope="col">Rating</th>
+                <th scope="col">Reviews</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        @if (!Status.SearchConfiguring && !Status.Searching)
+        {
+            <tbody>
+                <Virtualize Items="@Listings" Context="product">
+                    <tr>
+                        <th scope="row" @key="product.Listing">
+                            <div class="text-truncate">@product.Listing.Name</div>
+                            <small>From @product.ShopName</small>
+                            @if (product.Listing.ConvertedPrices)
+                        {
+                            <span class="ml-3 mr-1 badge badge-warning">Converted price</span>
+                        }
+                        @foreach (ResultsProfile.Category c in product.Tops)
+                        {
+                            <span class="mx-1 badge badge-primary">@GetCategoryTag(c)</span>
+                        }
+                    </th>
+                    <td>
+                        @if (product.Listing.UpperPrice != product.Listing.LowerPrice)
+                        {
+                            <div class="text-truncate">
+                                @product.Listing.LowerPrice to @product.Listing.UpperPrice
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-truncate">
+                                @GetOrNA(product.Listing.LowerPrice)
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        <div class="text-truncate">
+                            @GetOrNA(product.Listing.Shipping)
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-truncate">
+                            @GetOrNA(product.Listing.PurchaseCount)
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-truncate">
+                            @(product.Listing.Rating != null ? string.Format("{0:P2}", product.Listing.Rating) : "N/A")
+                        </div>
+                    </td>
+                    <td>@GetOrNA(product.Listing.ReviewCount)</td>
+                    <td>
+                        <a href="@product.Listing.URL" class="btn btn-primary" target="_blank">View</a>
+                    </td>
+                </tr>
+            </Virtualize>
+        </tbody>
+        }
+    </table>
+</div>
+
+@code {
+    public override Views View => Views.Table;
+
+    public TableView(Search.Status status) : base(status)
+    {
+    }
+
+    private protected override string GetCategoryTag(ResultsProfile.Category c)
+    {
+        switch (c)
+        {
+            case ResultsProfile.Category.RatingPriceRatio:
+                return "Best rating to price ratio";
+            case ResultsProfile.Category.Price:
+                return "Lowest price";
+            case ResultsProfile.Category.Purchases:
+                return "Most purchases";
+            case ResultsProfile.Category.Reviews:
+                return "Most reviews";
+        }
+        throw new ArgumentException($"{c} does not have an associated string.");
+    }
+
+    private string GetOrNA(object data, string prepend = null, string append = null)
+    {
+        return data != null ? (prepend + data.ToString() + append) : "N/A";
+    }
+}

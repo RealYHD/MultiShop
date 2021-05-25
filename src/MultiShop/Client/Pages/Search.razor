@@ -1,19 +1,16 @@
 @page "/search/{Query?}"
-@using Microsoft.Extensions.Configuration
-@using MultiShop.Shared
-@inject HttpClient Http
-@inject IConfiguration Configuration
-@inject IJSRuntime js
+
+@using MultiShop.Client.Extensions.Models
 
 <div class="my-2">
     <div class="input-group my-2">
-        <input type="text" class="form-control" placeholder="What are you looking for?" aria-label="What are you looking for?" id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await PerformSearch(Query);})" disabled="@searching">
+        <input type="text" class="form-control" placeholder="What are you looking for?" aria-label="What are you looking for?" id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await PerformSearch(Query);})" disabled="@status.Searching" >
         <div class="input-group-append">
-            <button class=@ToggleSearchConfigButtonCss type="button" @onclick="@(() => showSearchConfiguration = !showSearchConfiguration)" title="Configure"><span class="oi oi-cog align-text-top"></span></button>
-            <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await PerformSearch(Query))" disabled="@searching">Search</button>
+            <ToggleableButton class="btn btn-outline-secondary" title="Configure" OnToggleCallback="@((t) => status.SearchConfiguring = t)"><span class="oi oi-cog align-text-top"></span></ToggleableButton>
+            <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await PerformSearch(Query))" disabled="@status.Searching">Search</button>
         </div>
     </div>
-    @if (showSearchConfiguration)
+    @if (status.SearchConfiguring)
     {
         <div class="mb-2 mt-4 py-2">
             <h4>Configuration</h4>
@@ -24,8 +21,8 @@
                         <h6 class="card-subtitle mb-2 text-muted">How many results from each store?</h6>
                         <p class="card-text">This is the maximum number of results we gather for each store we have access to. The larger the result, the longer it takes to load search queries.</p>
                         <div class="form-group">
-                            <label for="quantitySlider">Quantity: @activeProfile.maxResults</label>
-                            <input class="form-control-range" type="range" id="quantitySlider" min="1" max="200" step="1" @bind="activeProfile.maxResults" @bind:event="oninput">
+                            <label for="quantitySlider">Quantity: @activeSearchProfile.MaxResults</label>
+                            <input class="form-control-range" type="range" id="quantitySlider" min="1" max="200" step="1" @bind="activeSearchProfile.MaxResults" @bind:event="oninput">
                         </div>
                     </div>
                 </div>
@@ -38,10 +35,10 @@
                             <div class="input-group-prepend">
                                 <label class="input-group-text" for="currency-select">Currency</label>
                             </div>
-                            <select class="form-control custom-select" id="currency-select" @bind="activeProfile.currency">
+                            <select class="form-control custom-select" id="currency-select" @bind="activeSearchProfile.Currency">
                                 @foreach (Currency currency in Enum.GetValues<Currency>())
                                 {
-                                    @if (currency == activeProfile.currency)
+                                    @if (currency == activeSearchProfile.Currency)
                                     {
                                         <option selected>@currency</option>
                                     }
@@ -60,11 +57,11 @@
                         <h6 class="card-subtitle mb-2 text-muted">We'll crop out the lower rated stuff.</h6>
                         <p class="card-text">We'll only show products that have a rating greater than or equal to the set minimum rating. Optionally, we can also show those that don't have rating.</p>
                         <div class="form-group">
-                            <label for="ratingSlider">Minimum rating: @(string.Format("{0:P0}", activeProfile.minRating))</label>
-                            <input class="form-control-range" type="range" id="ratingSlider" min="0" max="1" step="0.01" @bind="activeProfile.minRating" @bind:event="oninput">
+                            <label for="ratingSlider">Minimum rating: @(string.Format("{0:P0}", activeSearchProfile.MinRating))</label>
+                            <input class="form-control-range" type="range" id="ratingSlider" min="0" max="1" step="0.01" @bind="activeSearchProfile.MinRating" @bind:event="oninput">
                         </div>
                         <div class="form-group form-check">
-                            <input class="form-check-input" type="checkbox" id="keepUnratedCheckbox" @bind="activeProfile.keepUnrated">
+                            <input class="form-check-input" type="checkbox" id="keepUnratedCheckbox" @bind="activeSearchProfile.KeepUnrated">
                             <label class="form-check-label" for="keepUnratedCheckbox">Keep unrated results</label>
                         </div>
                     </div>
@@ -77,11 +74,11 @@
                         <div class="input-group my-2">
                             <div class="input-group-prepend">
                                 <div class="input-group-text">
-                                    <input type="checkbox" @bind="activeProfile.enableUpperPrice">
+                                    <input type="checkbox" @bind="activeSearchProfile.EnableUpperPrice">
                                 </div>
                                 <span class="input-group-text">Upper limit</span>
                             </div>
-                            <input type="number" class="form-control" @bind="activeProfile.UpperPrice" disabled="@(!activeProfile.enableUpperPrice)">
+                            <input type="number" class="form-control" @bind="activeSearchProfile.UpperPrice" disabled="@(!activeSearchProfile.EnableUpperPrice)">
                             <div class="input-group-append">
                                 <span class="input-group-text">.00</span>
                             </div>
@@ -90,7 +87,7 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">Lower limit</span>
                             </div>
-                            <input type="number" class="form-control" @bind="activeProfile.lowerPrice">
+                            <input type="number" class="form-control" @bind="activeSearchProfile.LowerPrice">
                             <div class="input-group-prepend">
                                 <span class="input-group-text">.00</span>
                             </div>
@@ -105,7 +102,7 @@
                         @foreach (string shop in Shops.Keys)
                         {
                             <div class="form-group form-check my-2">
-                                <input class="form-check-input" type="checkbox" id=@(shop + "Checkbox") @bind="activeProfile.shopStates[shop]" disabled="@(!activeProfile.shopStates.IsToggleable(shop))">
+                                <input class="form-check-input" type="checkbox" id=@(shop + "Checkbox") @bind="@(activeSearchProfile.ShopStates[shop])" disabled="@(!activeSearchProfile.ShopStates.IsShopToggleable(shop))">
                                 <label class="form-check-label" for=@(shop + "Checkbox")>@shop enabled</label>
                             </div>
                         }
@@ -120,10 +117,10 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">Minimum purchases</span>
                             </div>
-                            <input type="number" class="form-control" min="0" step="1" @bind="activeProfile.minPurchases">
+                            <input type="number" class="form-control" min="0" step="1" @bind="activeSearchProfile.MinPurchases">
                         </div>
                         <div class="form-group form-check my-2">
-                            <input class="form-check-input" type="checkbox" id="keepNullPurchasesCheckbox" @bind="activeProfile.keepUnknownPurchaseCount">
+                            <input class="form-check-input" type="checkbox" id="keepNullPurchasesCheckbox" @bind="activeSearchProfile.KeepUnknownPurchaseCount">
                             <label class="form-check-label" for="keepNullPurchasesCheckbox">Keep unknown listings</label>
                         </div>
                     </div>
@@ -137,10 +134,10 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">Minimum reviews</span>
                             </div>
-                            <input type="number" class="form-control" min="0" step="1" @bind="activeProfile.minReviews">
+                            <input type="number" class="form-control" min="0" step="1" @bind="activeSearchProfile.MinReviews">
                         </div>
                         <div class="form-group form-check my-2">
-                            <input class="form-check-input" type="checkbox" id="keepNullRatingsCheckbox" @bind="activeProfile.keepUnknownRatingCount">
+                            <input class="form-check-input" type="checkbox" id="keepNullRatingsCheckbox" @bind="activeSearchProfile.KeepUnknownRatingCount">
                             <label class="form-check-label" for="keepNullRatingsCheckbox">Keep unknown listings</label>
                         </div>
                     </div>
@@ -153,17 +150,17 @@
                         <div class="input-group my-2">
                             <div class="input-group-prepend">
                                 <span class="input-group-text">
-                                    <input type="checkbox" @bind="activeProfile.enableMaxShippingFee">
+                                    <input type="checkbox" @bind="activeSearchProfile.EnableMaxShippingFee">
                                 </span>
                                 <span class="input-group-text">Max shipping</span>
                             </div>
-                            <input type="number" class="form-control" min="0" step="1" @bind="activeProfile.MaxShippingFee" disabled="@(!activeProfile.enableMaxShippingFee)">
+                            <input type="number" class="form-control" min="0" step="1" @bind="activeSearchProfile.MaxShippingFee" disabled="@(!activeSearchProfile.EnableMaxShippingFee)">
                             <div class="input-group-append">
                                 <span class="input-group-text">.00</span>
                             </div>
                         </div>
                         <div class="form-group form-check my-2">
-                            <input class="form-check-input" type="checkbox" id="keepNullShipping" @bind="activeProfile.keepUnknownShipping">
+                            <input class="form-check-input" type="checkbox" id="keepNullShipping" @bind="activeSearchProfile.KeepUnknownShipping">
                             <label class="form-check-label" for="keepNullShipping">Keep unknown listings</label>
                         </div>
                     </div>
@@ -175,9 +172,9 @@
 
 <div class="my-3 py-2">
     <div class="d-inline-flex" style="width: 100%; border-bottom-style: solid; border-bottom-width: 1px; border-color: lightgray;">
-        <button type="button" class=@ToggleResultsConfigurationcss @onclick="@(() => showResultsConfiguration = !showResultsConfiguration)"><span class="oi oi-sort-descending"></span></button>
+        <ToggleableButton class="btn btn-outline-secondary btn-tab" OnToggleCallback="@(t => status.ResultsConfiguring = t)"><span class="oi oi-sort-descending"></span></ToggleableButton>
     </div>
-    @if (showResultsConfiguration)
+    @if (status.ResultsConfiguring)
     {
         <div style="border-color: lightgray;" class="p-1">
             <div class="card m-2" style="max-width: 23em;">
@@ -197,7 +194,7 @@
 
     <div class="d-flex flex-wrap" style="width: 100%; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: lightgray;">
         <div class="align-self-end">
-            @if (searching)
+            @if (status.Searching)
             {
                 @if (listings.Count != 0)
                 {
@@ -216,7 +213,7 @@
             }
             else if (listings.Count != 0)
             {
-                @if (organizing)
+                @if (status.Organizing)
                 {
                     <div class="spinner-border spinner-border-sm text-success my-auto mr-1" role="status">
                         <span class="sr-only">Loading...</span>
@@ -228,7 +225,7 @@
                     <span class="text-muted">Looked through @resultsChecked listings and found @listings.Count viable results.</span>
                 }
             }
-            else if (searched)
+            else if (status.Searched)
             {
                 <span class="text-muted">We've found @resultsChecked listings and unfortunately none matched your search.</span>
             }
@@ -241,74 +238,7 @@
     <div>
         @if (listings.Count > 0)
         {
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Price</th>
-                            <th scope="col">Shipping</th>
-                            <th scope="col">Purchases</th>
-                            <th scope="col">Rating</th>
-                            <th scope="col">Reviews</th>
-                            <th scope="col"></th>
-                        </tr>
-                    </thead>
-                    @if (!showSearchConfiguration && !searching) {
-                        <tbody>
-                            <Virtualize Items="@listings" Context="product">
-                                <tr>
-                                    <th scope="row" @key="product.Listing">
-                                        <div class="text-truncate">@product.Listing.Name</div>
-                                        <small>From @product.ShopName</small>
-                                        @if (product.Listing.ConvertedPrices)
-                                        {
-                                            <span class="ml-3 mr-1 badge badge-warning">Converted price</span>
-                                        }
-                                        @foreach (ResultsProfile.Category c in product.Tops)
-                                        {
-                                            <span class="mx-1 badge badge-primary">@CategoryTags(c)</span>
-                                        }
-                                    </th>
-                                    <td>
-                                        @if (product.Listing.UpperPrice != product.Listing.LowerPrice)
-                                        {
-                                            <div class="text-truncate">
-                                                @product.Listing.LowerPrice to @product.Listing.UpperPrice
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="text-truncate">
-                                                @GetOrNA(product.Listing.LowerPrice)
-                                            </div>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="text-truncate">
-                                            @GetOrNA(product.Listing.Shipping)
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-truncate">
-                                            @GetOrNA(product.Listing.PurchaseCount)
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-truncate">
-                                            @(product.Listing.Rating != null ? string.Format("{0:P2}", product.Listing.Rating) : "N/A")
-                                        </div>
-                                    </td>
-                                    <td>@GetOrNA(product.Listing.ReviewCount)</td>
-                                    <td>
-                                        <a href="@product.Listing.URL" class="btn btn-primary" target="_blank">View</a>
-                                    </td>
-                                </tr>
-                            </Virtualize>
-                        </tbody>
-                    }
-                </table>
-            </div>
+            @listingViews[CurrentView]
         }
     </div>
 </div>

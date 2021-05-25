@@ -1,8 +1,10 @@
 using System;
+using MultiShop.Shared;
+using MultiShop.Shared.Models;
 
-namespace MultiShop.Shared
+namespace MultiShop.Client.Extensions.Models
 {
-    public static class ResultCategoryExtensions
+    public static class ResultProfileExtensions
     {
         public static int? CompareListings(this ResultsProfile.Category category, ProductListingInfo a, ProductListingInfo b)
         {

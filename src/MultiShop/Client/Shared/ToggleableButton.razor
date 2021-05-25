@@ -1,0 +1,28 @@
+<button @attributes="AdditionalAttributes" class=@ButtonClasses type="button" @onclick="OnClick" title="Configure">@ChildContent</button>
+
+@code {
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object> AdditionalAttributes { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnToggleCallback { get; set; }
+
+    private async Task OnClick() {
+        state = !state;
+        await OnToggleCallback.InvokeAsync(state);
+    }
+
+    private bool state;
+
+    private string ButtonClasses
+    {
+        get
+        {
+            IReadOnlyDictionary<string, object> t = AdditionalAttributes;
+            return (state ? "active " : "") + (AdditionalAttributes["class"] as string);
+        }
+    }
+}

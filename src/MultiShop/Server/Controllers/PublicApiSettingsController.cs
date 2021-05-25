@@ -16,10 +16,10 @@ namespace MultiShop.Server.Controllers
         }
 
         [HttpGet]
-        public IReadOnlyDictionary<string, string> GetPublicConfiguration() {
-            return new Dictionary<string, string> {
+        public IActionResult GetPublicConfiguration() {
+            return Ok(new Dictionary<string, string> {
                 {"IdentityServer:Registration", configuration["IdentityServer:Registration"]}
-            };
+            });
         }
     }
 }

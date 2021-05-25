@@ -22,7 +22,6 @@ namespace MultiShop.Client
 
             builder.Services.AddHttpClient("MultiShop.ServerAPI", client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)).AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
 
-            // Supply HttpClient instances that include access tokens when making requests to the server project
             builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("MultiShop.ServerAPI"));
             Action<HttpClient> configureClient = client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
 

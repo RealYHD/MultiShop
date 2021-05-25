@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MultiShop.Server.Data.Migrations
 {
-    public partial class CreateIdentitySchema : Migration
+    public partial class InitialCreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -191,6 +191,60 @@ namespace MultiShop.Server.Data.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ResultsProfile",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ApplicationUserId = table.Column<string>(type: "TEXT", nullable: true),
+                    Order = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ResultsProfile", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ResultsProfile_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SearchProfile",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ApplicationUserId = table.Column<string>(type: "TEXT", nullable: true),
+                    Currency = table.Column<int>(type: "INTEGER", nullable: false),
+                    MaxResults = table.Column<int>(type: "INTEGER", nullable: false),
+                    MinRating = table.Column<float>(type: "REAL", nullable: false),
+                    KeepUnrated = table.Column<bool>(type: "INTEGER", nullable: false),
+                    EnableUpperPrice = table.Column<bool>(type: "INTEGER", nullable: false),
+                    UpperPrice = table.Column<int>(type: "INTEGER", nullable: false),
+                    LowerPrice = table.Column<int>(type: "INTEGER", nullable: false),
+                    MinPurchases = table.Column<int>(type: "INTEGER", nullable: false),
+                    KeepUnknownPurchaseCount = table.Column<bool>(type: "INTEGER", nullable: false),
+                    MinReviews = table.Column<int>(type: "INTEGER", nullable: false),
+                    KeepUnknownRatingCount = table.Column<bool>(type: "INTEGER", nullable: false),
+                    EnableMaxShippingFee = table.Column<bool>(type: "INTEGER", nullable: false),
+                    MaxShippingFee = table.Column<int>(type: "INTEGER", nullable: false),
+                    KeepUnknownShipping = table.Column<bool>(type: "INTEGER", nullable: false),
+                    ShopStates = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SearchProfile", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SearchProfile_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -253,6 +307,18 @@ namespace MultiShop.Server.Data.Migrations
                 name: "IX_PersistedGrants_SubjectId_SessionId_Type",
                 table: "PersistedGrants",
                 columns: new[] { "SubjectId", "SessionId", "Type" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ResultsProfile_ApplicationUserId",
+                table: "ResultsProfile",
+                column: "ApplicationUserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SearchProfile_ApplicationUserId",
+                table: "SearchProfile",
+                column: "ApplicationUserId",
+                unique: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -277,6 +343,12 @@ namespace MultiShop.Server.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "PersistedGrants");
+
+            migrationBuilder.DropTable(
+                name: "ResultsProfile");
+
+            migrationBuilder.DropTable(
+                name: "SearchProfile");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

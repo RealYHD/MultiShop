@@ -12,20 +12,5 @@ namespace MultiShop.Shop.Framework
         public int? PurchaseCount { get; set; }
         public int? ReviewCount { get; set; }
         public bool ConvertedPrices { get; set; }
-
-        public override bool Equals(object obj)
-        {
-            if (obj == null || GetType() != obj.GetType())
-            {
-                return false;
-            }
-            ProductListing b = (ProductListing)obj;
-            return this.URL == b.URL;
-        }
-
-        public override int GetHashCode()
-        {
-            return URL.GetHashCode();
-        }
     }
 }

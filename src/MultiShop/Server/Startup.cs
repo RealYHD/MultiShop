@@ -10,6 +10,8 @@ using Microsoft.Extensions.Hosting;
 using System.Linq;
 using MultiShop.Server.Data;
 using MultiShop.Server.Models;
+using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 
 namespace MultiShop.Server
 {
@@ -26,9 +28,10 @@ namespace MultiShop.Server
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlite(
-                    Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<ApplicationDbContext>(options => {
+                options.UseLazyLoadingProxies();
+                options.UseSqlite(Configuration.GetConnectionString("DefaultConnection"));
+            });
 
             services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -37,6 +40,8 @@ namespace MultiShop.Server
 
             services.AddIdentityServer()
                 .AddApiAuthorization<ApplicationUser, ApplicationDbContext>();
+
+            services.Configure<IdentityOptions>(Options => Options.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier); //Note: Despite default, doesn't work without this.
 
             services.AddAuthentication()
                 .AddIdentityServerJwt();
