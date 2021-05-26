@@ -2,20 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using MultiShop.Client.Extensions;
 using MultiShop.Client.Listing;
 using MultiShop.Shared.Models;
 using MultiShop.Shop.Framework;
-using SimpleLogger;
 
 namespace MultiShop.Client.Pages
 {
     public partial class Search : IAsyncDisposable
     {
+        [Inject]
+        private ILogger<Search> Logger { get; set; }
         [CascadingParameter]
         Task<AuthenticationState> AuthenticationStateTask { get; set; }
 
@@ -51,14 +52,12 @@ namespace MultiShop.Client.Pages
             };
 
             if (authState.User.Identity.IsAuthenticated) {
-                Logger.Log($"User \"{authState.User.Identity.Name}\" is authenticated. Checking for saved profiles.", LogLevel.Debug);
+                Logger.LogDebug($"User \"{authState.User.Identity.Name}\" is authenticated. Checking for saved profiles.");
                 HttpResponseMessage searchProfileResponse = await Http.GetAsync("Profile/Search");
                 if (searchProfileResponse.IsSuccessStatusCode) {
                     activeSearchProfile = await searchProfileResponse.Content.ReadFromJsonAsync<SearchProfile>();
-                    Logger.Log("Received: " + await searchProfileResponse.Content.ReadAsStringAsync());
-                    Logger.Log("Serialized then deserialized: " + JsonSerializer.Serialize(activeSearchProfile));
                 } else {
-                    Logger.Log("Could not load search profile from server. Using default.", LogLevel.Warning);
+                    Logger.LogWarning("Could not load search profile from server. Using default.");
                     activeSearchProfile = new SearchProfile();
                 }
 
@@ -66,7 +65,7 @@ namespace MultiShop.Client.Pages
                 if (resultsProfileResponse.IsSuccessStatusCode) {
                     activeResultsProfile = await resultsProfileResponse.Content.ReadFromJsonAsync<ResultsProfile>();
                 } else {
-                    Logger.Log("Could not load results profile from server.", LogLevel.Debug);
+                    Logger.LogWarning("Could not load results profile from server. Using default.");
                     activeResultsProfile = new ResultsProfile();
                 }
             } else {
@@ -90,7 +89,7 @@ namespace MultiShop.Client.Pages
             if (string.IsNullOrWhiteSpace(query)) return;
             if (status.Searching) return;
             status.Searching = true;
-            Logger.Log($"Received search request for \"{query}\".", LogLevel.Debug);
+            Logger.LogDebug($"Received search request for \"{query}\".");
             resultsChecked = 0;
             listings.Clear();
             Dictionary<ResultsProfile.Category, List<ProductListingInfo>> greatest = new Dictionary<ResultsProfile.Category,
@@ -99,7 +98,7 @@ namespace MultiShop.Client.Pages
             {
                 if (activeSearchProfile.ShopStates[shopName])
                 {
-                    Logger.Log($"Querying \"{shopName}\" for products.");
+                    Logger.LogDebug($"Querying \"{shopName}\" for products.");
                     Shops[shopName].SetupSession(query, activeSearchProfile.Currency);
                     int shopViableResults = 0;
                     await foreach (ProductListing listing in Shops[shopName])
@@ -145,11 +144,11 @@ namespace MultiShop.Client.Pages
                         shopViableResults += 1;
                         if (shopViableResults >= activeSearchProfile.MaxResults) break;
                     }
-                    Logger.Log($"\"{shopName}\" has completed. There are {listings.Count} results in total.", LogLevel.Debug);
+                    Logger.LogDebug($"\"{shopName}\" has completed. There are {listings.Count} results in total.");
                 }
                 else
                 {
-                    Logger.Log($"Skipping {shopName} since it's disabled.");
+                    Logger.LogDebug($"Skipping {shopName} since it's disabled.");
                 }
             }
             status.Searching = false;

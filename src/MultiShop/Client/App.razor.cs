@@ -5,14 +5,18 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MultiShop.Client.Module;
 using MultiShop.Shop.Framework;
-using SimpleLogger;
 
 namespace MultiShop.Client
 {
     public partial class App
     {
+        [Inject]
+        private ILogger<App> Logger {get; set; }
+
         private bool modulesLoaded = false;
 
         private Dictionary<string, IShop> shops = new Dictionary<string, IShop>();
@@ -31,16 +35,16 @@ namespace MultiShop.Client
             string[] dependencyNames = await http.GetFromJsonAsync<string[]>("ShopModule/Dependencies");
             Dictionary<Task<byte[]>, string> downloadTasks = new Dictionary<Task<byte[]>, string>();
 
-            Logger.Log("Beginning to download shop modules...");
+            Logger.LogInformation("Beginning to download shop modules...");
             foreach (string moduleName in moduleNames)
             {
-                Logger.Log($"Downloading shop: {moduleName}", LogLevel.Debug);
+                Logger.LogDebug($"Downloading shop: {moduleName}");
                 downloadTasks.Add(http.GetByteArrayAsync("shopModule/Modules/" + moduleName), moduleName);
             }
-            Logger.Log("Beginning to download shop module dependencies...");
+            Logger.LogInformation("Beginning to download shop module dependencies...");
             foreach (string depName in dependencyNames)
             {
-                Logger.Log($"Downloading shop module dependency: {depName}", LogLevel.Debug);
+                Logger.LogDebug($"Downloading shop module dependency: {depName}");
                 downloadTasks.Add(http.GetByteArrayAsync("ShopModule/Dependencies/" + depName), depName);
             }
 
@@ -48,16 +52,16 @@ namespace MultiShop.Client
             {
                 Task<byte[]> downloadTask = await Task.WhenAny(downloadTasks.Keys);
                 assemblyData.Add(downloadTasks[downloadTask], await downloadTask);
-                Logger.Log($"Shop module \"{downloadTasks[downloadTask]}\" completed downloading.", LogLevel.Debug);
+                Logger.LogDebug($"Shop module \"{downloadTasks[downloadTask]}\" completed downloading.");
                 downloadTasks.Remove(downloadTask);
             }
-            Logger.Log($"Downloaded {assemblyData.Count} assemblies in total.");
+            Logger.LogInformation($"Downloaded {assemblyData.Count} assemblies in total.");
 
             ShopModuleLoadContext context = new ShopModuleLoadContext(assemblyData);
-            Logger.Log("Beginning to load shop modules.");
+            Logger.LogInformation("Beginning to load shop modules.");
             foreach (string moduleName in moduleNames)
             {
-                Logger.Log($"Attempting to load shop module: \"{moduleName}\"", LogLevel.Debug);
+                Logger.LogDebug($"Attempting to load shop module: \"{moduleName}\"");
                 Assembly moduleAssembly = context.LoadFromAssemblyName(new AssemblyName(moduleName));
                 bool shopLoaded = false;
                 foreach (Type type in moduleAssembly.GetTypes())
@@ -68,22 +72,22 @@ namespace MultiShop.Client
                             shopLoaded = true;
                             shop.Initialize();
                             shops.Add(shop.ShopName, shop);
-                            Logger.Log($"Added shop: {shop.ShopName}", LogLevel.Debug);
+                            Logger.LogDebug($"Added shop: {shop.ShopName}");
                         }
                     }
                 }
                 if (!shopLoaded) {
-                    Logger.Log($"Module \"{moduleName}\" was reported to be a shop module, but did not contain a shop interface. Please report this to the site administrator.", LogLevel.Warning);
+                    Logger.LogWarning($"Module \"{moduleName}\" was reported to be a shop module, but did not contain a shop interface. Please report this to the site administrator.");
                 }
             }
-            Logger.Log($"Shop module loading complete. Loaded a total of {shops.Count} shops.");
+            Logger.LogInformation($"Shop module loading complete. Loaded a total of {shops.Count} shops.");
             modulesLoaded = true;
             foreach (string assemblyName in context.UseCounter.Keys)
             {
                 int usage = context.UseCounter[assemblyName];
-                Logger.Log($"\"{assemblyName}\" was used {usage} times.", LogLevel.Debug);
+                Logger.LogDebug($"\"{assemblyName}\" was used {usage} times.");
                 if (usage <= 0) {
-                    Logger.Log($"\"{assemblyName}\" was not used at all.", LogLevel.Warning);
+                    Logger.LogWarning($"\"{assemblyName}\" was not used. Please report this to the site administrator.");
                 }
             }
         }
@@ -93,7 +97,6 @@ namespace MultiShop.Client
             foreach (string name in shops.Keys)
             {
                 shops[name].Dispose();
-                Logger.Log($"Ending lifetime of shop module for \"{name}\".", LogLevel.Debug);
             }
         }
     }

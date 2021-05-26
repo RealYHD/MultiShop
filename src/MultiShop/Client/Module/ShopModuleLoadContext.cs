@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
-using SimpleLogger;
 
 namespace MultiShop.Client.Module
 {
@@ -16,14 +15,17 @@ namespace MultiShop.Client.Module
         {
             this.rawAssemblies = new Dictionary<string, byte[]>(assemblies);
             useCounter = new Dictionary<string, int>();
+            foreach (string name in rawAssemblies.Keys)
+            {
+                useCounter[name] = 0;
+            }
         }
 
         protected override Assembly Load(AssemblyName assemblyName)
         {
-            Logger.Log("ShopModuleLoadContext is attempting to load assembly: " + assemblyName.FullName, LogLevel.Debug);
             if (!rawAssemblies.ContainsKey(assemblyName.FullName)) return null;
 
-            useCounter[assemblyName.FullName] = useCounter.GetValueOrDefault(assemblyName.FullName) + 1;
+            useCounter[assemblyName.FullName] += 1;
 
             using (MemoryStream stream = new MemoryStream(rawAssemblies[assemblyName.FullName]))
             {

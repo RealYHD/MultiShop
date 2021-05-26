@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using Castle.Core.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MultiShop.Server.Options;
-using SimpleLogger;
 
 namespace MultiShop.Server.Controllers
 {
@@ -13,13 +14,15 @@ namespace MultiShop.Server.Controllers
     [Route("[controller]")]
     public class ShopModuleController : ControllerBase
     {
+        private readonly ILogger<ShopModuleController> logger;
         private readonly IConfiguration configuration;
         private IDictionary<string, byte[]> shopModules;
         private IDictionary<string, byte[]> shopModuleDependencies;
         
 
-        public ShopModuleController(IConfiguration configuration)
+        public ShopModuleController(IConfiguration configuration, ILogger<ShopModuleController> logger)
         {
+            this.logger = logger;
             this.configuration = configuration;
             this.shopModules = new Dictionary<string, byte[]>();
             this.shopModuleDependencies = new Dictionary<string, byte[]>();
@@ -33,10 +36,10 @@ namespace MultiShop.Server.Controllers
                     shopModules.Add(assemblyName.FullName, System.IO.File.ReadAllBytes(file));
                 }
                 catch (BadImageFormatException e) {
-                    Logger.Log($"\"{e.FileName}\" is not a valid assembly. Ignoring.", LogLevel.Warning);
+                    logger.LogWarning($"\"{e.FileName}\" is not a valid assembly. Ignoring.");
                 }
                 catch (ArgumentException) {
-                    Logger.Log($"\"{Path.GetFileName(file)}\" has the same full name as another assembly. Ignoring this one.", LogLevel.Warning);
+                    logger.LogWarning($"\"{Path.GetFileName(file)}\" has the same full name as another assembly. Ignoring this one.");
                 }
             }
 
@@ -48,10 +51,10 @@ namespace MultiShop.Server.Controllers
                     shopModuleDependencies.Add(assemblyName.FullName, System.IO.File.ReadAllBytes(file));
                 }
                 catch (BadImageFormatException e) {
-                    Logger.Log($"\"{e.FileName}\" is not a valid assembly. Ignoring.", LogLevel.Warning);
+                    logger.LogWarning($"\"{e.FileName}\" is not a valid assembly. Ignoring.");
                 }
                 catch (ArgumentException) {
-                    Logger.Log($"\"{Path.GetFileName(file)}\" has the same full name as another assembly. Ignoring this one.", LogLevel.Warning);
+                    logger.LogWarning($"\"{Path.GetFileName(file)}\" has the same full name as another assembly. Ignoring this one.");
                 }
             }
         }
