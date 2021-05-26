@@ -75,10 +75,6 @@
 @code {
     public override Views View => Views.Table;
 
-    public TableView(Search.Status status) : base(status)
-    {
-    }
-
     private protected override string GetCategoryTag(ResultsProfile.Category c)
     {
         switch (c)

@@ -17,10 +17,5 @@ namespace MultiShop.Client.Listing
         public Search.Status Status { get; set; }
 
         private protected abstract string GetCategoryTag(ResultsProfile.Category category);
-
-        public ListingView(Search.Status status)
-        {
-            this.Status = status;
-        }
     }
 }

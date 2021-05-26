@@ -1,14 +1,15 @@
 @page "/search/{Query?}"
 
 @using MultiShop.Client.Extensions
+@using MultiShop.Client.Listing
 
 <div class="my-2">
     <div class="input-group my-2">
-        <input type="text" class="form-control" placeholder="What are you looking for?" aria-label="What are you looking for?" id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await PerformSearch(Query);})" disabled="@status.Searching" >
-        <div class="input-group-append">
-            <ToggleableButton class="btn btn-outline-secondary" title="Configure" OnToggleCallback="@((t) => status.SearchConfiguring = t)"><span class="oi oi-cog align-text-top"></span></ToggleableButton>
-            <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await PerformSearch(Query))" disabled="@status.Searching">Search</button>
-        </div>
+        <SearchBar SearchPlaceholder="What are you looking for?" OnSearchRequested="@PerformSearch" @ref="searchBar">
+            <Append>
+                <ToggleableButton class="btn btn-outline-secondary" title="Configure" OnToggleCallback="@((t) => {status.SearchConfiguring = t; StateHasChanged();})"><span class="oi oi-cog align-text-top"></span></ToggleableButton>
+            </Append>
+        </SearchBar>
     </div>
     @if (status.SearchConfiguring)
     {
@@ -238,7 +239,12 @@
     <div>
         @if (listings.Count > 0)
         {
-            @listingViews[CurrentView]
+            @switch (CurrentView)
+            {
+                case Views.Table:
+                    <TableView Listings="@listings" Status="@status"></TableView>
+                break;
+            }
         }
     </div>
 </div>

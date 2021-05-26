@@ -1,0 +1,26 @@
+<input type="text" class="form-control" placeholder=@SearchPlaceholder aria-label=@SearchPlaceholder id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await Search();})" disabled="@Searching">
+<div class="input-group-append">
+    @Append
+    <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await Search())" disabled="@Searching">Search</button>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment Append { get; set; }
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; }
+
+    public string Query { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSearchRequested { get; set; }
+
+    public bool Searching { get; set; }
+    public async Task Search()
+    {
+        Searching = true;
+        await OnSearchRequested.InvokeAsync(Query);
+        Searching = false;
+    }
+}

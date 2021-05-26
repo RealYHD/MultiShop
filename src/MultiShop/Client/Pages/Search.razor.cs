@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using MultiShop.Client.Shared;
 using MultiShop.Client.Extensions;
 using MultiShop.Client.Listing;
 using MultiShop.Shared.Models;
@@ -17,6 +18,10 @@ namespace MultiShop.Client.Pages
     {
         [Inject]
         private ILogger<Search> Logger { get; set; }
+
+        [Inject]
+        private HttpClient Http { get; set; }
+
         [CascadingParameter]
         Task<AuthenticationState> AuthenticationStateTask { get; set; }
 
@@ -26,12 +31,9 @@ namespace MultiShop.Client.Pages
         [Parameter]
         public string Query { get; set; }
 
-        [Inject]
-        private HttpClient Http { get; set; }
+        private SearchBar searchBar;
 
         private Status status = new Status();
-
-        private Dictionary<Views, ListingView> listingViews;
 
         private Views CurrentView = Views.Table;
 
@@ -46,11 +48,7 @@ namespace MultiShop.Client.Pages
             await base.OnInitializedAsync();
 
             AuthenticationState authState = await AuthenticationStateTask;
-
-            listingViews = new Dictionary<Views, ListingView>() {
-                {Views.Table, new TableView(status)}
-            };
-
+            
             if (authState.User.Identity.IsAuthenticated) {
                 Logger.LogDebug($"User \"{authState.User.Identity.Name}\" is authenticated. Checking for saved profiles.");
                 HttpResponseMessage searchProfileResponse = await Http.GetAsync("Profile/Search");
@@ -84,10 +82,21 @@ namespace MultiShop.Client.Pages
             }
         }
 
+        protected override async Task OnAfterRenderAsync(bool firstRender) {
+            await base.OnAfterRenderAsync(firstRender);
+            if (firstRender) {
+                searchBar.Query = Query;
+                searchBar.Searching = true;
+                await PerformSearch(Query);
+                searchBar.Searching = false;
+            }
+        }
+
         private async Task PerformSearch(string query)
         {
             if (string.IsNullOrWhiteSpace(query)) return;
             if (status.Searching) return;
+            SearchProfile searchProfile = activeSearchProfile.DeepCopy();
             status.Searching = true;
             Logger.LogDebug($"Received search request for \"{query}\".");
             resultsChecked = 0;
@@ -96,10 +105,10 @@ namespace MultiShop.Client.Pages
             List<ProductListingInfo>>();
             foreach (string shopName in Shops.Keys)
             {
-                if (activeSearchProfile.ShopStates[shopName])
+                if (searchProfile.ShopStates[shopName])
                 {
                     Logger.LogDebug($"Querying \"{shopName}\" for products.");
-                    Shops[shopName].SetupSession(query, activeSearchProfile.Currency);
+                    Shops[shopName].SetupSession(query, searchProfile.Currency);
                     int shopViableResults = 0;
                     await foreach (ProductListing listing in Shops[shopName])
                     {
@@ -111,12 +120,12 @@ namespace MultiShop.Client.Pages
                         }
 
 
-                        if (listing.Shipping == null && !activeSearchProfile.KeepUnknownShipping || (activeSearchProfile.EnableMaxShippingFee && listing.Shipping > activeSearchProfile.MaxShippingFee)) continue;
+                        if (listing.Shipping == null && !searchProfile.KeepUnknownShipping || (searchProfile.EnableMaxShippingFee && listing.Shipping > searchProfile.MaxShippingFee)) continue;
                         float shippingDifference = listing.Shipping != null ? listing.Shipping.Value : 0;
-                        if (!(listing.LowerPrice + shippingDifference >= activeSearchProfile.LowerPrice && (!activeSearchProfile.EnableUpperPrice || listing.UpperPrice + shippingDifference <= activeSearchProfile.UpperPrice))) continue;
-                        if ((listing.Rating == null && !activeSearchProfile.KeepUnrated) && activeSearchProfile.MinRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
-                        if ((listing.PurchaseCount == null && !activeSearchProfile.KeepUnknownPurchaseCount) || activeSearchProfile.MinPurchases > (listing.PurchaseCount == null ? 0 : listing.PurchaseCount)) continue;
-                        if ((listing.ReviewCount == null && !activeSearchProfile.KeepUnknownRatingCount) || activeSearchProfile.MinReviews > (listing.ReviewCount == null ? 0 : listing.ReviewCount)) continue;
+                        if (!(listing.LowerPrice + shippingDifference >= searchProfile.LowerPrice && (!searchProfile.EnableUpperPrice || listing.UpperPrice + shippingDifference <= searchProfile.UpperPrice))) continue;
+                        if ((listing.Rating == null && !searchProfile.KeepUnrated) && searchProfile.MinRating > (listing.Rating == null ? 0 : listing.Rating)) continue;
+                        if ((listing.PurchaseCount == null && !searchProfile.KeepUnknownPurchaseCount) || searchProfile.MinPurchases > (listing.PurchaseCount == null ? 0 : listing.PurchaseCount)) continue;
+                        if ((listing.ReviewCount == null && !searchProfile.KeepUnknownRatingCount) || searchProfile.MinReviews > (listing.ReviewCount == null ? 0 : listing.ReviewCount)) continue;
 
                         ProductListingInfo info = new ProductListingInfo(listing, shopName);
                         listings.Add(info);
@@ -142,7 +151,7 @@ namespace MultiShop.Client.Pages
                         }
 
                         shopViableResults += 1;
-                        if (shopViableResults >= activeSearchProfile.MaxResults) break;
+                        if (shopViableResults >= searchProfile.MaxResults) break;
                     }
                     Logger.LogDebug($"\"{shopName}\" has completed. There are {listings.Count} results in total.");
                 }
