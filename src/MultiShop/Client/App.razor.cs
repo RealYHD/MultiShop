@@ -12,8 +12,11 @@ using MultiShop.Shop.Framework;
 
 namespace MultiShop.Client
 {
-    public partial class App
+    public partial class App : IDisposable
     {
+        [Inject]
+        private IHttpClientFactory HttpFactory { get; set; }
+        
         [Inject]
         private ILogger<App> Logger {get; set; }
 

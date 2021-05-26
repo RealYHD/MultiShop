@@ -1,9 +1,4 @@
-﻿@using System.Reflection
-@inject IHttpClientFactory HttpFactory
-@implements IDisposable
-
-
-<CascadingAuthenticationState>
+﻿<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
         <Found Context="routeData">
             @if (modulesLoaded)
