@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using MultiShop.Client.Extensions.Models;
+using MultiShop.Client.Extensions;
 using MultiShop.Client.Listing;
 using MultiShop.Shared.Models;
 using MultiShop.Shop.Framework;

@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Threading.Tasks;
+using MultiShop.Client.Module;
 using MultiShop.Shop.Framework;
 using SimpleLogger;
 
@@ -15,99 +16,84 @@ namespace MultiShop.Client
         private bool modulesLoaded = false;
 
         private Dictionary<string, IShop> shops = new Dictionary<string, IShop>();
-        private Dictionary<string, byte[]> assemblyData = new Dictionary<string, byte[]>();
-        private Dictionary<string, Assembly> assemblyCache = new Dictionary<string, Assembly>();
         protected override async Task OnInitializedAsync()
         {
-            await DownloadShopModules();
             await base.OnInitializedAsync();
+            await DownloadShopModules();
         }
         private async Task DownloadShopModules()
         {
             HttpClient http = HttpFactory.CreateClient("Public-MultiShop.ServerAPI");
-            Logger.Log($"Fetching shop modules.", LogLevel.Debug);
-            string[] assemblyFileNames = await http.GetFromJsonAsync<string[]>("ShopModules");
-            Dictionary<Task<byte[]>, string> downloadTasks = new Dictionary<Task<byte[]>, string>(assemblyFileNames.Length);
 
-            foreach (string assemblyFileName in assemblyFileNames)
+            Dictionary<string, byte[]> assemblyData = new Dictionary<string, byte[]>();
+
+            string[] moduleNames = await http.GetFromJsonAsync<string[]>("ShopModule/Modules");
+            string[] dependencyNames = await http.GetFromJsonAsync<string[]>("ShopModule/Dependencies");
+            Dictionary<Task<byte[]>, string> downloadTasks = new Dictionary<Task<byte[]>, string>();
+
+            Logger.Log("Beginning to download shop modules...");
+            foreach (string moduleName in moduleNames)
             {
-                Logger.Log($"Downloading \"{assemblyFileName}\"...", LogLevel.Debug);
-                downloadTasks.Add(http.GetByteArrayAsync(Path.Join("ShopModules", assemblyFileName)), assemblyFileName);
+                Logger.Log($"Downloading shop: {moduleName}", LogLevel.Debug);
+                downloadTasks.Add(http.GetByteArrayAsync("shopModule/Modules/" + moduleName), moduleName);
+            }
+            Logger.Log("Beginning to download shop module dependencies...");
+            foreach (string depName in dependencyNames)
+            {
+                Logger.Log($"Downloading shop module dependency: {depName}", LogLevel.Debug);
+                downloadTasks.Add(http.GetByteArrayAsync("ShopModule/Dependencies/" + depName), depName);
             }
 
-            while (downloadTasks.Count != 0)
+            while (downloadTasks.Count > 0)
             {
-                Task<byte[]> data = await Task.WhenAny(downloadTasks.Keys);
-                string assemblyFileName = downloadTasks[data];
-                Logger.Log($"\"{assemblyFileName}\" completed downloading.", LogLevel.Debug);
-                assemblyData.Add(assemblyFileName, data.Result);
-                downloadTasks.Remove(data);
+                Task<byte[]> downloadTask = await Task.WhenAny(downloadTasks.Keys);
+                assemblyData.Add(downloadTasks[downloadTask], await downloadTask);
+                Logger.Log($"Shop module \"{downloadTasks[downloadTask]}\" completed downloading.", LogLevel.Debug);
+                downloadTasks.Remove(downloadTask);
             }
+            Logger.Log($"Downloaded {assemblyData.Count} assemblies in total.");
 
-            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyDependencyRequest;
-
-            foreach (string assemblyFileName in assemblyData.Keys)
+            ShopModuleLoadContext context = new ShopModuleLoadContext(assemblyData);
+            Logger.Log("Beginning to load shop modules.");
+            foreach (string moduleName in moduleNames)
             {
-                Assembly assembly = AppDomain.CurrentDomain.Load(assemblyData[assemblyFileName]);
-                bool used = false;
-                foreach (Type type in assembly.GetTypes())
+                Logger.Log($"Attempting to load shop module: \"{moduleName}\"", LogLevel.Debug);
+                Assembly moduleAssembly = context.LoadFromAssemblyName(new AssemblyName(moduleName));
+                bool shopLoaded = false;
+                foreach (Type type in moduleAssembly.GetTypes())
                 {
-                    if (typeof(IShop).IsAssignableFrom(type))
-                    {
+                    if (typeof(IShop).IsAssignableFrom(type)) {
                         IShop shop = Activator.CreateInstance(type) as IShop;
-                        if (shop != null)
-                        {
+                        if (shop != null) {
+                            shopLoaded = true;
                             shop.Initialize();
                             shops.Add(shop.ShopName, shop);
-                            Logger.Log($"Registered and started lifetime of module for \"{shop.ShopName}\".", LogLevel.Debug);
-                            used = true;
+                            Logger.Log($"Added shop: {shop.ShopName}", LogLevel.Debug);
                         }
                     }
                 }
-                if (!used) {
-                    Logger.Log($"Since unused, caching \"{assemblyFileName}\".", LogLevel.Debug);
-                    assemblyCache.Add(assemblyFileName, assembly);
+                if (!shopLoaded) {
+                    Logger.Log($"Module \"{moduleName}\" was reported to be a shop module, but did not contain a shop interface. Please report this to the site administrator.", LogLevel.Warning);
                 }
-                assemblyData.Remove(assemblyFileName);
             }
-            foreach (string assembly in assemblyData.Keys)
-            {
-                Logger.Log($"\"{assembly}\" was unused.", LogLevel.Warning);
-            }
-            foreach (string assembly in assemblyCache.Keys)
-            {
-                Logger.Log($"\"{assembly}\" was unused.", LogLevel.Warning);
-            }
-            assemblyData.Clear();
-            assemblyCache.Clear();
+            Logger.Log($"Shop module loading complete. Loaded a total of {shops.Count} shops.");
             modulesLoaded = true;
-        }
-
-
-        private Assembly OnAssemblyDependencyRequest(object sender, ResolveEventArgs args)
-        {
-            string dependencyName = args.Name.Substring(0, args.Name.IndexOf(','));
-            Logger.Log($"Assembly \"{args.RequestingAssembly.GetName().Name}\" is requesting dependency assembly \"{dependencyName}\".", LogLevel.Debug);
-            if (assemblyCache.ContainsKey(dependencyName)) {
-                Logger.Log($"Found \"{dependencyName}\" in cache.", LogLevel.Debug);
-                Assembly dep = assemblyCache[dependencyName];
-                assemblyCache.Remove(dependencyName);
-                return dep;
-            } else if (assemblyData.ContainsKey(dependencyName)) {
-                return AppDomain.CurrentDomain.Load(assemblyData[dependencyName]);
-            } else {
-                Logger.Log($"No dependency under name \"{args.Name}\"", LogLevel.Warning);
-                return null;
+            foreach (string assemblyName in context.UseCounter.Keys)
+            {
+                int usage = context.UseCounter[assemblyName];
+                Logger.Log($"\"{assemblyName}\" was used {usage} times.", LogLevel.Debug);
+                if (usage <= 0) {
+                    Logger.Log($"\"{assemblyName}\" was not used at all.", LogLevel.Warning);
+                }
             }
         }
-
 
         public void Dispose()
         {
             foreach (string name in shops.Keys)
             {
                 shops[name].Dispose();
-                Logger.Log($"Ending lifetime of shop module for \"{name}\".");
+                Logger.Log($"Ending lifetime of shop module for \"{name}\".", LogLevel.Debug);
             }
         }
     }

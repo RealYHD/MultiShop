@@ -2,7 +2,7 @@ using System;
 using MultiShop.Shared;
 using MultiShop.Shared.Models;
 
-namespace MultiShop.Client.Extensions.Models
+namespace MultiShop.Client.Extensions
 {
     public static class ResultProfileExtensions
     {
