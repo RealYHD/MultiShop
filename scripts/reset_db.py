@@ -1,13 +1,16 @@
 import os
 import shutil
 
-SERVER_DIR = "../src/MultiShop/Server"
+
+SERVER_DIR = "src/MultiShop/Server"
 DATA_DIR = "Data"
 DB_MIGRATE_CMD = "dotnet ef migrations add InitialCreate -o {0}"
 DB_UPDATE_CMD = "dotnet ef database update"
 
-print("Changing to database migrations directory.")
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+os.chdir("..")
 os.chdir(SERVER_DIR)
+print("Working in: " + os.getcwd())
 
 migrationsDir = os.path.join(DATA_DIR, "Migrations")
 
