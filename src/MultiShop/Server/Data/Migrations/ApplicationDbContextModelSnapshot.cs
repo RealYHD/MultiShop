@@ -315,6 +315,32 @@ namespace MultiShop.Server.Data.Migrations
                     b.ToTable("AspNetUsers");
                 });
 
+            modelBuilder.Entity("MultiShop.Shared.Models.ApplicationProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CacheCommonSearches")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("DarkMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("EnableSearchHistory")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique();
+
+                    b.ToTable("ApplicationProfile");
+                });
+
             modelBuilder.Entity("MultiShop.Shared.Models.ResultsProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -450,6 +476,13 @@ namespace MultiShop.Server.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MultiShop.Shared.Models.ApplicationProfile", b =>
+                {
+                    b.HasOne("MultiShop.Server.Models.ApplicationUser", null)
+                        .WithOne("ApplicationProfile")
+                        .HasForeignKey("MultiShop.Shared.Models.ApplicationProfile", "ApplicationUserId");
+                });
+
             modelBuilder.Entity("MultiShop.Shared.Models.ResultsProfile", b =>
                 {
                     b.HasOne("MultiShop.Server.Models.ApplicationUser", null)
@@ -466,6 +499,9 @@ namespace MultiShop.Server.Data.Migrations
 
             modelBuilder.Entity("MultiShop.Server.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("ApplicationProfile")
+                        .IsRequired();
+
                     b.Navigation("ResultsProfile")
                         .IsRequired();
 

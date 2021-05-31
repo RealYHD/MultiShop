@@ -1,0 +1,55 @@
+@using MultiShop.Client.Extensions
+@page "/configure"
+
+<div class="d-flex">
+    <nav class=@ApplicationProfile.GetNavCssClass()>
+        <div class=@NavMenuCssClass>
+            <ul class="nav flex-column">
+                @foreach (Section section in sectionOrder)
+                {
+                    <li class=@GetNavItemCssClass(section)>
+                        <button class="btn btn-link nav-link" type="button" @onclick=@(() => currentSection = section)>@sectionNames[section]</button>
+                    </li>
+                }
+            </ul>
+        </div>
+        <button class="nav-toggler" type="button" @onclick="@(() => collapseNavMenu = !collapseNavMenu)">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </nav>
+    <div class="container">
+        @switch (currentSection)
+        {
+            case Section.Opening:
+                <h1 class="mb-1">Configuration</h1>
+                <small class="text-muted">For all your control-asserting needs.</small>
+                <p>You can change how the app looks and operates. These changes will actually be saved to your account if you're logged in so your changes will be with you across different devices! Otherwise, we'll just stash them in cookies. Also know for your convenience, each option is followed by a short description of what changing that option will do. Get started by selecting a section!</p>
+            break;
+            case Section.UI:
+                <h4 class="card-title">UI</h4>
+                <div>
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="darkmodeSwitch" @onclick="@(async () => {ApplicationProfile.DarkMode = !ApplicationProfile.DarkMode; await LayoutStateChangeNotifier.LayoutHasChanged();})" checked=@ApplicationProfile.DarkMode>
+                        <label class="custom-control-label" for="darkmodeSwitch">Enable to dark mode</label>
+                    </div>
+                    <p>Changes the UI to a dark theme. Pretty self-explanatory.</p>
+                </div>
+            break;
+            case Section.Search:
+                <h4 class="card-title">Search</h4>
+                <div>
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="cacheSearchSwitch" @bind=ApplicationProfile.CacheCommonSearches>
+                        <label class="custom-control-label" for="cacheSearchSwitch">Cache common searches</label>
+                    </div>
+                    <p>We will store results from commonly searched queries to reproduce repeated searches faster. to make sure prices are relevant, queries older than a few minutes will be removed.</p>
+                </div>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="searchHistorySwitch" @bind=ApplicationProfile.EnableSearchHistory>
+                    <label class="custom-control-label" for="searchHistorySwitch">Save search history.</label>
+                </div>
+            break;
+        }
+    </div>
+</div>
+

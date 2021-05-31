@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
-using MultiShop.Client.Shared;
 using MultiShop.Client.Extensions;
 using MultiShop.Client.Listing;
+using MultiShop.Client.Services;
+using MultiShop.Client.Shared;
 using MultiShop.Shared.Models;
 using MultiShop.Shop.Framework;
 
@@ -17,16 +18,19 @@ namespace MultiShop.Client.Pages
     public partial class Search : IAsyncDisposable
     {
         [Inject]
+        private LayoutStateChangeNotifier LayoutStateChangeNotifier { get; set; }
+
+        [Inject]
         private ILogger<Search> Logger { get; set; }
 
         [Inject]
         private HttpClient Http { get; set; }
 
         [CascadingParameter]
-        Task<AuthenticationState> AuthenticationStateTask { get; set; }
+        private Task<AuthenticationState> AuthenticationStateTask { get; set; }
 
         [CascadingParameter(Name = "Shops")]
-        public Dictionary<string, IShop> Shops { get; set; }
+        public IReadOnlyDictionary<string, IShop> Shops { get; set; }
 
         [Parameter]
         public string Query { get; set; }
@@ -43,30 +47,45 @@ namespace MultiShop.Client.Pages
         private List<ProductListingInfo> listings = new List<ProductListingInfo>();
         private int resultsChecked = 0;
 
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            LayoutStateChangeNotifier.Notify += UpdateState;
+        }
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
 
             AuthenticationState authState = await AuthenticationStateTask;
-            
-            if (authState.User.Identity.IsAuthenticated) {
+
+            if (authState.User.Identity.IsAuthenticated)
+            {
                 Logger.LogDebug($"User \"{authState.User.Identity.Name}\" is authenticated. Checking for saved profiles.");
                 HttpResponseMessage searchProfileResponse = await Http.GetAsync("Profile/Search");
-                if (searchProfileResponse.IsSuccessStatusCode) {
+                if (searchProfileResponse.IsSuccessStatusCode)
+                {
                     activeSearchProfile = await searchProfileResponse.Content.ReadFromJsonAsync<SearchProfile>();
-                } else {
+                }
+                else
+                {
                     Logger.LogWarning("Could not load search profile from server. Using default.");
                     activeSearchProfile = new SearchProfile();
                 }
 
                 HttpResponseMessage resultsProfileResponse = await Http.GetAsync("Profile/Results");
-                if (resultsProfileResponse.IsSuccessStatusCode) {
+                if (resultsProfileResponse.IsSuccessStatusCode)
+                {
                     activeResultsProfile = await resultsProfileResponse.Content.ReadFromJsonAsync<ResultsProfile>();
-                } else {
+                }
+                else
+                {
                     Logger.LogWarning("Could not load results profile from server. Using default.");
                     activeResultsProfile = new ResultsProfile();
                 }
-            } else {
+            }
+            else
+            {
                 activeSearchProfile = new SearchProfile();
                 activeResultsProfile = new ResultsProfile();
             }
@@ -82,9 +101,11 @@ namespace MultiShop.Client.Pages
             }
         }
 
-        protected override async Task OnAfterRenderAsync(bool firstRender) {
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
             await base.OnAfterRenderAsync(firstRender);
-            if (firstRender) {
+            if (firstRender)
+            {
                 searchBar.Query = Query;
                 searchBar.Searching = true;
                 await PerformSearch(Query);
@@ -247,13 +268,21 @@ namespace MultiShop.Client.Pages
             StateHasChanged();
         }
 
+        private async Task UpdateState() {
+            await InvokeAsync(() => {
+                StateHasChanged();
+            });
+        }
+
         public async ValueTask DisposeAsync()
         {
             AuthenticationState authState = await AuthenticationStateTask;
-            if (authState.User.Identity.IsAuthenticated) {
+            if (authState.User.Identity.IsAuthenticated)
+            {
                 await Http.PutAsJsonAsync("Profile/Search", activeSearchProfile);
                 await Http.PutAsJsonAsync("Profile/Results", activeResultsProfile);
             }
+            LayoutStateChangeNotifier.Notify -= UpdateState;
         }
 
         public class Status

@@ -1,0 +1,48 @@
+nav {
+    position: static;
+    padding: 0.5rem;
+    height: fit-content;
+}
+
+nav .nav-toggler {
+    display: none;
+    border-style: none;
+    padding: 0px;
+    background-color: transparent;
+}
+
+.collapse {
+    display: block;
+}
+
+.navbar-light .nav-item.active .btn {
+    color: black;
+}
+
+.nav .nav-item .btn {
+    color: gray;
+}
+
+.navbar-dark .nav-item.active .btn {
+    color: white;
+}
+
+@media (max-width: 50rem) {
+    nav .nav-toggler {
+        display: block;
+    }
+
+    nav {
+        position: fixed;
+        padding: 1rem;
+        bottom: 1rem;
+        left: 1rem;
+        border-radius: 12px;
+    }
+
+    .collapse {
+        display: none;
+    }
+
+
+}

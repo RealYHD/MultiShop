@@ -48,7 +48,7 @@ namespace MultiShop.Shared.Models
                 if (EnableMaxShippingFee) _maxShippingFee = value;
             }
         }
-        public bool KeepUnknownShipping { get; set; }
+        public bool KeepUnknownShipping { get; set; } = true;
 
         [Required]
         public ShopToggler ShopStates { get; set; } = new ShopToggler();
@@ -114,6 +114,12 @@ namespace MultiShop.Shared.Models
         public override int GetHashCode()
         {
             return Id;
+        }
+
+        public SearchProfile DeepCopy() {
+            SearchProfile profile = (SearchProfile)MemberwiseClone();
+            profile.ShopStates = ShopStates.Clone();
+            return profile;
         }
     }
 }

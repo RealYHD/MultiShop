@@ -107,6 +107,28 @@ namespace MultiShop.Server.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ApplicationProfile",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ApplicationUserId = table.Column<string>(type: "TEXT", nullable: true),
+                    DarkMode = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CacheCommonSearches = table.Column<bool>(type: "INTEGER", nullable: false),
+                    EnableSearchHistory = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApplicationProfile", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApplicationProfile_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
                 columns: table => new
                 {
@@ -246,6 +268,12 @@ namespace MultiShop.Server.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ApplicationProfile_ApplicationUserId",
+                table: "ApplicationProfile",
+                column: "ApplicationUserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
                 column: "RoleId");
@@ -323,6 +351,9 @@ namespace MultiShop.Server.Data.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ApplicationProfile");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 

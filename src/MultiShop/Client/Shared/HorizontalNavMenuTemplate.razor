@@ -1,0 +1,85 @@
+@using MultiShop.Client.Extensions
+@using MultiShop.Shared.Models
+@using MultiShop.Client.Services
+@implements IDisposable
+@inject LayoutStateChangeNotifier LayoutStateChangeNotifier
+
+<nav class=@ApplicationProfile.GetNavCssClass("navbar navbar-expand-lg")>
+    <a class="navbar-brand" href="">
+        @BrandContent
+    </a>
+    <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class=@NavMenuCssClass>
+        <ul class="navbar-nav mr-auto">
+            @foreach (string item in Items)
+            {
+                <li class="nav-item">
+                    <NavLink class="nav-link" href=@item Match=@(string.IsNullOrEmpty(item) ? NavLinkMatch.All : NavLinkMatch.Prefix)>
+                        @ItemTemplate(item)
+                    </NavLink>
+                </li>
+            }
+        </ul>
+        @LatterContent
+    </div>
+</nav>
+
+@code {
+    [CascadingParameter(Name = "ApplicationProfile")]
+    private ApplicationProfile ApplicationProfile { get; set; }
+
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => (collapseNavMenu ? "collapse " : " ") + "navbar-collapse";
+
+    [Parameter]
+    public IList<string> Items { get; set; }
+
+    [Parameter]
+    public RenderFragment BrandContent { get; set; }
+
+    [Parameter]
+    public RenderFragment<string> ItemTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment LatterContent { get; set; }
+    private bool disposed;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LayoutStateChangeNotifier.Notify += UpdateState;
+    }
+
+    private async Task UpdateState() {
+        await InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+            }
+            LayoutStateChangeNotifier.Notify -= UpdateState;
+            disposed = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+}

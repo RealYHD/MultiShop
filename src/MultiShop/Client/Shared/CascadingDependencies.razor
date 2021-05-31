@@ -1,0 +1,14 @@
+@using Microsoft.Extensions.Logging
+@using Module
+@using MultiShop.Shared.Models
+
+@if (loadingDisplay == null)
+{
+    <CascadingValue Value="@applicationProfile" Name="ApplicationProfile">
+        <CascadingValue Value="@shops" Name="Shops">
+            @Content
+        </CascadingValue>
+    </CascadingValue>    
+} else {
+    @LoadingContent(loadingDisplay)
+}

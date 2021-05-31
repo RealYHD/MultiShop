@@ -4,8 +4,30 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+#app {
+    min-height: 100vh;
+}
+
+.page {
+    min-height: inherit;
+}
+
+.bg-dark {
+    background-color: #262626 !important;
+}
+
+nav.bg-dark {
+    background-color: #1A1A1A !important;
+}
+
 .content {
     padding-top: 1.5rem;
+    padding-right: 2rem;
+    padding-left: 2rem;
+}
+
+.bg-dark .card {
+    background-color: #1F1F1F;
 }
 
 #blazor-error-ui {

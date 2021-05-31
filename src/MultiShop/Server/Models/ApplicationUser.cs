@@ -11,5 +11,8 @@ namespace MultiShop.Server.Models
 
         [Required]
         public virtual ResultsProfile ResultsProfile { get; private set; } = new ResultsProfile();
+
+        [Required]
+        public virtual ApplicationProfile ApplicationProfile {get; private set; } = new ApplicationProfile();
     }
 }
