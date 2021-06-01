@@ -17,12 +17,5 @@
 
     private bool state;
 
-    private string ButtonClasses
-    {
-        get
-        {
-            IReadOnlyDictionary<string, object> t = AdditionalAttributes;
-            return (state ? "active " : "") + (AdditionalAttributes["class"] as string);
-        }
-    }
+    private string ButtonClasses => (state ? "active " : null) + (AdditionalAttributes != null && AdditionalAttributes.ContainsKey("class") ? AdditionalAttributes["class"] as string : null);
 }
