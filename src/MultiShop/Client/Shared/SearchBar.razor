@@ -1,10 +1,19 @@
-<input type="text" class="form-control" placeholder=@SearchPlaceholder aria-label=@SearchPlaceholder id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await Search();})" disabled="@Searching">
-<div class="input-group-append">
-    @Append
-    <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await Search())" disabled="@Searching">Search</button>
+@using System.Text.Json
+@using Microsoft.Extensions.Logging
+@inject ILogger<SearchBar> Logger
+
+<div @attributes="AdditionalAttributes" class=@groupClassCss>
+    <input type="text" class="form-control" placeholder=@SearchPlaceholder aria-label=@SearchPlaceholder id="search-input" @bind="Query" @onkeyup="@(async (a) => {if (a.Code == "Enter" || a.Code == "NumpadEnter") await Search();})" disabled="@Searching">
+    <div class="input-group-append">
+        @Append
+        <button class="btn btn-outline-primary" type="button" @onclick="@(async () => await Search())" disabled="@Searching">Search</button>
+    </div>
 </div>
 
 @code {
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IDictionary<string, object> AdditionalAttributes { get; set; }
+
     [Parameter]
     public RenderFragment Append { get; set; }
 
@@ -17,6 +26,9 @@
     public EventCallback<string> OnSearchRequested { get; set; }
 
     public bool Searching { get; set; }
+
+    private string groupClassCss => "input-group " + (AdditionalAttributes != null && AdditionalAttributes.ContainsKey("class") ? AdditionalAttributes["class"] as string : null);
+
     public async Task Search()
     {
         Searching = true;
