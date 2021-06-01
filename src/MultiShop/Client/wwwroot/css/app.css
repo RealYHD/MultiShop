@@ -13,11 +13,19 @@ html, body {
 }
 
 .bg-dark {
-    background-color: #262626 !important;
+    background-color: #2E2E2E !important;
 }
 
 nav.bg-dark {
     background-color: #1A1A1A !important;
+}
+
+.bg-dark .card {
+    background-color: #1F1F1F;
+}
+
+.bg-dark .jumbotron {
+    background-color: #262626;
 }
 
 .content {
@@ -26,9 +34,6 @@ nav.bg-dark {
     padding-left: 2rem;
 }
 
-.bg-dark .card {
-    background-color: #1F1F1F;
-}
 
 #blazor-error-ui {
     background: lightyellow;
