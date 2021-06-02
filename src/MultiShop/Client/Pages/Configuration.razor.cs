@@ -30,7 +30,7 @@ namespace MultiShop.Client.Pages
 
         private ApplicationProfile ApplicationProfile { get; set; }
 
-        private bool collapseNavMenu;
+        private bool collapseNavMenu = true;
         private string NavMenuCssClass => (collapseNavMenu ? "collapse" : "");
 
         private enum Section
