@@ -25,7 +25,9 @@ namespace MultiShop.Client.Pages
         [CascadingParameter]
         private Task<AuthenticationState> AuthenticationStateTask { get; set; }
 
-        [CascadingParameter(Name = "ApplicationProfile")]
+        [CascadingParameter(Name = "RuntimeDependencyManager")]
+        private RuntimeDependencyManager RuntimeDependencyManager { get; set; }
+
         private ApplicationProfile ApplicationProfile { get; set; }
 
         private bool collapseNavMenu;
@@ -49,6 +51,12 @@ namespace MultiShop.Client.Pages
             Section.UI,
             Section.Search
         };
+
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            ApplicationProfile = RuntimeDependencyManager.Get<ApplicationProfile>();
+        }
 
         private string GetNavItemCssClass(Section section)
         {

@@ -29,8 +29,11 @@ namespace MultiShop.Client.Pages
         [CascadingParameter]
         private Task<AuthenticationState> AuthenticationStateTask { get; set; }
 
-        [CascadingParameter(Name = "Shops")]
-        public IReadOnlyDictionary<string, IShop> Shops { get; set; }
+        [CascadingParameter(Name = "RuntimeDependencyManager")]
+        public RuntimeDependencyManager RuntimeDependencyManager { get; set; }
+
+        private IReadOnlyDictionary<string, IShop> Shops { get; set; }
+
 
         [Parameter]
         public string Query { get; set; }
@@ -51,6 +54,7 @@ namespace MultiShop.Client.Pages
         {
             base.OnInitialized();
             LayoutStateChangeNotifier.Notify += UpdateState;
+            Shops = RuntimeDependencyManager.Get<IReadOnlyDictionary<string, IShop>>();
         }
 
         protected override async Task OnInitializedAsync()

@@ -5,7 +5,7 @@
 @implements IDisposable
 @inject LayoutStateChangeNotifier LayoutStateChangeNotifier
 
-<div class=@ApplicationProfile.GetPageCssClass("page")>
+<div class=@(dependencyManager.Get<ApplicationProfile>("").GetPageCssClass("page"))>
     <HorizontalSiteNav />
     <div class="content">
         @Body
@@ -13,14 +13,16 @@
 </div>
 
 @code {
-    [CascadingParameter(Name = "ApplicationProfile")]
-    private ApplicationProfile ApplicationProfile { get; set; }
+    [CascadingParameter(Name = "RuntimeDependencyManager")]
+    private RuntimeDependencyManager dependencyManager { get; set; }
+
     private bool disposed;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         LayoutStateChangeNotifier.Notify += UpdateState;
+        
     }
 
     private async Task UpdateState()

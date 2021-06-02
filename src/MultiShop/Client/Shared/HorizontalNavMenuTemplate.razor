@@ -4,7 +4,7 @@
 @implements IDisposable
 @inject LayoutStateChangeNotifier LayoutStateChangeNotifier
 
-<nav class=@ApplicationProfile.GetNavCssClass("navbar navbar-expand-lg")>
+<nav class=@(RuntimeDependencyManager.Get<ApplicationProfile>().GetNavCssClass("navbar navbar-expand-lg"))>
     <a class="navbar-brand" href="">
         @BrandContent
     </a>
@@ -14,7 +14,7 @@
 
     <div class=@NavMenuCssClass>
         <ul class="navbar-nav mr-auto">
-            @foreach (string item in Items)
+            @foreach (string item in Places)
             {
                 <li class="nav-item">
                     <NavLink class="nav-link" href=@item Match=@(string.IsNullOrEmpty(item) ? NavLinkMatch.All : NavLinkMatch.Prefix)>
@@ -28,15 +28,15 @@
 </nav>
 
 @code {
-    [CascadingParameter(Name = "ApplicationProfile")]
-    private ApplicationProfile ApplicationProfile { get; set; }
+    [CascadingParameter(Name = "RuntimeDependencyManager")]
+    private RuntimeDependencyManager RuntimeDependencyManager { get; set; }
 
     private bool collapseNavMenu = true;
 
     private string NavMenuCssClass => (collapseNavMenu ? "collapse " : " ") + "navbar-collapse";
 
     [Parameter]
-    public IList<string> Items { get; set; }
+    public IList<string> Places { get; set; }
 
     [Parameter]
     public RenderFragment BrandContent { get; set; }

@@ -4,10 +4,8 @@
 
 @if (loadingDisplay == null)
 {
-    <CascadingValue Value="@applicationProfile" Name="ApplicationProfile">
-        <CascadingValue Value="@shops" Name="Shops">
-            @Content
-        </CascadingValue>
+    <CascadingValue Value="@manager" Name="RuntimeDependencyManager">
+        @Content
     </CascadingValue>    
 } else {
     @LoadingContent(loadingDisplay)
