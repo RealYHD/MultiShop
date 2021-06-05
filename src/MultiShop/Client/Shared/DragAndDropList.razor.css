@@ -1,3 +1,8 @@
-li.list-group-item:hover {
-    background-color: #F5F5F5;
+.bg-dark .list-group-item {
+    background-color: #697F85;
+    color: whitesmoke;
+}
+
+.bg-dark .list-group-item-action:hover {
+    background-color: #85A6A6;
 }

@@ -1,10 +1,11 @@
+@using MultiShop.Shared.Models
 @typeparam TItem
 @inject IJSRuntime JS
 
 <ul class=@ListGroupCss style="width: max-content;" ondragover="event.preventDefault()">
     @foreach (TItem item in Items)
     {
-        <li class="list-group-item" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
+        <li class="list-group-item list-group-item-action" draggable=@((!processingDropChange).ToString()) @ondragstart="@(() => itemDraggedIndex = Items.IndexOf(item))" @ondrop="@(async () => await OnDrop(item))">
             <div class="d-inline-flex">
                 <div class="mr-3">
                     <button class="btn" type="button" style="padding: 0px;" @onclick="@(() => OnButtonClickMove(Items.IndexOf(item), true))" disabled="@(processingDropChange || Items.IndexOf(item) <= 0)"><span class="oi oi-caret-top"></span></button>
@@ -20,6 +21,11 @@
 
 
 @code {
+    [CascadingParameter(Name = "RuntimeDependencyManager")]
+    private RuntimeDependencyManager RuntimeDependencyManager {get; set;}
+
+    private ApplicationProfile ApplicationProfile {get; set;}
+
     [Parameter]
     public IList<TItem> Items { get; set; }
 
@@ -47,7 +53,13 @@
         await base.OnParametersSetAsync();
     }
 
+    protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            this.ApplicationProfile = RuntimeDependencyManager.Get<ApplicationProfile>();
+        }
 
+    
 
     private async Task OnDrop(TItem dropped)
     {
