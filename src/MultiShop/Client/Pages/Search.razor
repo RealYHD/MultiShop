@@ -5,7 +5,7 @@
 
 <div class="my-2">
     <div class="my-2">
-        <SearchBar SearchPlaceholder="What are you looking for?" OnSearchRequested="@PerformSearch" @ref="searchBar">
+        <SearchBar SearchPlaceholder="What are you looking for?" OnSearchRequested="@PerformSearch" @ref="searchBar" StartDisabled="@true">
             <Append>
                 <ToggleableButton class="btn btn-outline-secondary" title="Configure" OnToggleCallback="@((t) => {status.SearchConfiguring = t; StateHasChanged();})"><span class="oi oi-cog align-text-top"></span></ToggleableButton>
             </Append>

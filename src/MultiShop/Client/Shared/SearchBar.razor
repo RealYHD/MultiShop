@@ -25,14 +25,28 @@
     [Parameter]
     public EventCallback<string> OnSearchRequested { get; set; }
 
+    [Parameter]
+    public bool StartDisabled { get; set; }
+
     public bool Disabled { get; private set; }
 
     private string groupClassCss => "input-group " + (AdditionalAttributes != null && AdditionalAttributes.ContainsKey("class") ? AdditionalAttributes["class"] as string : null);
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (StartDisabled) Disabled = true;
+    }
 
     public async Task Search()
     {
         Disabled = true;
         await OnSearchRequested.InvokeAsync(Query);
+        Disabled = false;
+    }
+
+    public void Ready()
+    {
         Disabled = false;
     }
 }

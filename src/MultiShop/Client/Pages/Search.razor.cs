@@ -82,20 +82,16 @@ namespace MultiShop.Client.Pages
             if (activeSearchProfile == null) activeSearchProfile = new SearchProfile();
             if (activeResultsProfile == null) activeResultsProfile = new ResultsProfile();
             activeSearchProfile.ShopStates.TotalShops = Shops.Count;
-
-            if (Query != null)
-            {
-                searchBar.Query = Query;
-                await searchBar.Search();
-            }
         }
 
-        protected override async Task OnAfterRenderAsync(bool firstRender)
+        protected override async Task OnParametersSetAsync()
         {
-            await base.OnAfterRenderAsync(firstRender);
-            if (firstRender)
-            {
+            await base.OnParametersSetAsync();
+            if (Query != null) {
                 searchBar.Query = Query;
+                await searchBar.Search();
+            } else {
+                searchBar.Ready();
             }
         }
 
