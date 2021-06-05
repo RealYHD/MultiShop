@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MultiShop.Client.Services;
 using MultiShop.Shared.Models;
 
@@ -70,6 +71,7 @@ namespace MultiShop.Client.Pages
                 Logger.LogDebug($"User is authenticated. Attempting to save configuration to server.");
                 await Http.PutAsJsonAsync("Profile/Application", ApplicationProfile);
             }
+            await RuntimeDependencyManager.Get<IJSObjectReference>("LocalStorageManager").InvokeVoidAsync("save", "ApplicationProfile", ApplicationProfile);
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MultiShop.Client.Extensions;
 using MultiShop.Client.Listing;
 using MultiShop.Client.Services;
@@ -17,9 +18,6 @@ namespace MultiShop.Client.Pages
 {
     public partial class Search : IAsyncDisposable
     {
-        [Inject]
-        private LayoutStateChangeNotifier LayoutStateChangeNotifier { get; set; }
-
         [Inject]
         private ILogger<Search> Logger { get; set; }
 
@@ -53,7 +51,6 @@ namespace MultiShop.Client.Pages
         protected override void OnInitialized()
         {
             base.OnInitialized();
-            LayoutStateChangeNotifier.Notify += UpdateState;
             Shops = RuntimeDependencyManager.Get<IReadOnlyDictionary<string, IShop>>();
         }
 
@@ -71,36 +68,24 @@ namespace MultiShop.Client.Pages
                 {
                     activeSearchProfile = await searchProfileResponse.Content.ReadFromJsonAsync<SearchProfile>();
                 }
-                else
-                {
-                    Logger.LogWarning("Could not load search profile from server. Using default.");
-                    activeSearchProfile = new SearchProfile();
-                }
 
                 HttpResponseMessage resultsProfileResponse = await Http.GetAsync("Profile/Results");
                 if (resultsProfileResponse.IsSuccessStatusCode)
                 {
                     activeResultsProfile = await resultsProfileResponse.Content.ReadFromJsonAsync<ResultsProfile>();
                 }
-                else
-                {
-                    Logger.LogWarning("Could not load results profile from server. Using default.");
-                    activeResultsProfile = new ResultsProfile();
-                }
             }
-            else
-            {
-                activeSearchProfile = new SearchProfile();
-                activeResultsProfile = new ResultsProfile();
-            }
-            activeSearchProfile.ShopStates.TotalShops = Shops.Count;
-        }
+            IJSObjectReference localStorageManager = RuntimeDependencyManager.Get<IJSObjectReference>("LocalStorageManager");
+            if (activeSearchProfile == null) activeSearchProfile = await localStorageManager.InvokeAsync<SearchProfile>("retrieve", "SearchProfile");
+            if (activeResultsProfile == null) activeResultsProfile = await localStorageManager.InvokeAsync<ResultsProfile>("retrieve", "ResultsProfile");
 
-        protected override async Task OnParametersSetAsync()
-        {
-            await base.OnParametersSetAsync();
-            if (!string.IsNullOrEmpty(Query))
+            if (activeSearchProfile == null) activeSearchProfile = new SearchProfile();
+            if (activeResultsProfile == null) activeResultsProfile = new ResultsProfile();
+            activeSearchProfile.ShopStates.TotalShops = Shops.Count;
+
+            if (Query != null)
             {
+                searchBar.Searching = true;
                 await PerformSearch(Query);
             }
         }
@@ -111,9 +96,6 @@ namespace MultiShop.Client.Pages
             if (firstRender)
             {
                 searchBar.Query = Query;
-                searchBar.Searching = true;
-                await PerformSearch(Query);
-                searchBar.Searching = false;
             }
         }
 
@@ -121,6 +103,7 @@ namespace MultiShop.Client.Pages
         {
             if (string.IsNullOrWhiteSpace(query)) return;
             if (status.Searching) return;
+            searchBar.Searching = true;
             SearchProfile searchProfile = activeSearchProfile.DeepCopy();
             status.Searching = true;
             Logger.LogDebug($"Received search request for \"{query}\".");
@@ -187,6 +170,7 @@ namespace MultiShop.Client.Pages
             }
             status.Searching = false;
             status.Searched = true;
+            searchBar.Searching = false;
 
             int tagsAdded = 0;
             foreach (ResultsProfile.Category c in greatest.Keys)
@@ -272,12 +256,6 @@ namespace MultiShop.Client.Pages
             StateHasChanged();
         }
 
-        private async Task UpdateState() {
-            await InvokeAsync(() => {
-                StateHasChanged();
-            });
-        }
-
         public async ValueTask DisposeAsync()
         {
             AuthenticationState authState = await AuthenticationStateTask;
@@ -286,7 +264,9 @@ namespace MultiShop.Client.Pages
                 await Http.PutAsJsonAsync("Profile/Search", activeSearchProfile);
                 await Http.PutAsJsonAsync("Profile/Results", activeResultsProfile);
             }
-            LayoutStateChangeNotifier.Notify -= UpdateState;
+            IJSObjectReference localStorageManager = RuntimeDependencyManager.Get<IJSObjectReference>("LocalStorageManager");
+            await localStorageManager.InvokeVoidAsync("save", "SearchProfile", activeSearchProfile);
+            await localStorageManager.InvokeVoidAsync("save", "ResultsProfile", activeResultsProfile);
         }
 
         public class Status
