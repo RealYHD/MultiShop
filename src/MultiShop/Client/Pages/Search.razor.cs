@@ -85,8 +85,8 @@ namespace MultiShop.Client.Pages
 
             if (Query != null)
             {
-                searchBar.Searching = true;
-                await PerformSearch(Query);
+                searchBar.Query = Query;
+                await searchBar.Search();
             }
         }
 
@@ -103,7 +103,6 @@ namespace MultiShop.Client.Pages
         {
             if (string.IsNullOrWhiteSpace(query)) return;
             if (status.Searching) return;
-            searchBar.Searching = true;
             SearchProfile searchProfile = activeSearchProfile.DeepCopy();
             status.Searching = true;
             Logger.LogDebug($"Received search request for \"{query}\".");
@@ -170,7 +169,6 @@ namespace MultiShop.Client.Pages
             }
             status.Searching = false;
             status.Searched = true;
-            searchBar.Searching = false;
 
             int tagsAdded = 0;
             foreach (ResultsProfile.Category c in greatest.Keys)

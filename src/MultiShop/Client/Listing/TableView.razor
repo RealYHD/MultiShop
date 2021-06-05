@@ -3,7 +3,7 @@
 @inherits ListingView
 
 <div class="table-responsive">
-    <table class="table">
+    <table class=@("table" + (ApplicationProfile.DarkMode ? " table-dark" : null))>
         <thead>
             <tr>
                 <th scope="col">Name</th>
@@ -73,8 +73,19 @@
 </div>
 
 @code {
+    [CascadingParameter(Name = "RuntimeDependencyManager")]
+    private RuntimeDependencyManager RuntimeDependencyManager {get; set; }
+
+    private ApplicationProfile ApplicationProfile {get; set;}
+
     public override Views View => Views.Table;
 
+    protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            ApplicationProfile = RuntimeDependencyManager.Get<ApplicationProfile>();
+        }
+    
     private protected override string GetCategoryTag(ResultsProfile.Category c)
     {
         switch (c)

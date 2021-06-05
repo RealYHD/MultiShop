@@ -13,7 +13,7 @@ html, body {
 }
 
 .bg-dark {
-    background-color: #2E2E2E !important;
+    background-color: #36383C !important;
 }
 
 nav.bg-dark {
@@ -21,19 +21,61 @@ nav.bg-dark {
 }
 
 .bg-dark .card {
-    background-color: #1F1F1F;
+    border-style: solid;
+    border-width: 2px;
+    background-color: transparent;
+    border-color: #4F5A61;
 }
 
 .bg-dark .jumbotron {
     background-color: #262626;
 }
 
+.text-white {
+    color: whitesmoke;
+}
+
+.bg-dark input {
+    background-color: #4F5A61;
+    border-color: #4F5A61;
+    color: whitesmoke;
+}
+
+.bg-dark input:focus  {
+    background-color: #4F5A61;
+    border-color: #85A6A6;
+    color: whitesmoke;
+}
+
+.bg-dark input:disabled  {
+    background-color: #36383C;
+    color: whitesmoke;
+}
+
+.bg-dark input::placeholder {
+    color: whitesmoke;
+}
+
+.bg-dark a {
+    color: #A9CEC2;
+}
+
+.bg-dark .btn-outline-primary {
+    color: #A9CEC2;
+    border-color: #A9CEC2;
+}
+
+.bg-dark .btn-outline-primary:hover {
+    background-color: #A9CEC2;
+    color: whitesmoke;
+}
+
+
 .content {
     padding-top: 1.5rem;
     padding-right: 2rem;
     padding-left: 2rem;
 }
-
 
 #blazor-error-ui {
     background: lightyellow;

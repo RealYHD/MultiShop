@@ -1,0 +1,8 @@
+tbody > tr > th > div {
+    width: 45em;
+}
+
+.table thead th {
+    border-top-style: none;
+}
+
